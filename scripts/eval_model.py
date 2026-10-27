@@ -51,6 +51,7 @@ def main() -> None:
     p.add_argument("--max-new-tokens", type=int, default=None)
     p.add_argument("--device", type=str, default="cuda:0")
     p.add_argument("--load-in-4bit", action="store_true", help="NF4 load for T4 memory headroom")
+    p.add_argument("--adapter", type=str, default=None, help="Optional PEFT adapter directory")
     args = p.parse_args()
 
     with args.config.open() as f:
@@ -88,6 +89,11 @@ def main() -> None:
         load_kwargs["torch_dtype"] = torch.float16
 
     model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
+    if args.adapter:
+        from peft import PeftModel
+
+        print(f"[eval] loading adapter {args.adapter}", flush=True)
+        model = PeftModel.from_pretrained(model, args.adapter)
     model.eval()
 
     rows = load_jsonl(args.data)
