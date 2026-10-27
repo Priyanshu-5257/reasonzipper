@@ -86,13 +86,15 @@ def main() -> None:
                 messages, tokenize=False, add_generation_prompt=True
             )
 
-    # GRPO dataset: chat-formatted prompt + gold label column
+    # GRPO dataset: chat-formatted prompt + gold label as STRING
+    # (Arrow cannot mix int and "NONE" in one column.)
     ds_rows = []
     for r in rows:
+        gold = r["first_error_line"]
         ds_rows.append(
             {
                 "prompt": format_prompt(r["prompt"]),
-                "first_error_line": r["first_error_line"],
+                "first_error_line": "NONE" if gold == "NONE" else str(int(gold)),
             }
         )
     ds = Dataset.from_list(ds_rows)
@@ -123,7 +125,12 @@ def main() -> None:
         corrects = []
         lengths = []
         for text, gold in zip(completions, first_error_line):
-            scored = score_prediction(text, gold)
+            gold_parsed: int | str
+            if isinstance(gold, str) and gold.upper() == "NONE":
+                gold_parsed = "NONE"
+            else:
+                gold_parsed = int(gold)
+            scored = score_prediction(text, gold_parsed)
             corrects.append(bool(scored["correct"]))
             span, missing, _ = extract_reasoning_span(text)
             if span is None:

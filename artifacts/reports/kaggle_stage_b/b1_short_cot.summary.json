@@ -1,0 +1,8 @@
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "thinking": true,
+  "n": 100,
+  "accuracy": 0.74,
+  "mean_reasoning_tokens": 21.48,
+  "note": "from stage-b v4 before GRPO crash"
+}

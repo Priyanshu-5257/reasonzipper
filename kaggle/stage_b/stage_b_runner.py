@@ -24,6 +24,21 @@ SFT_LIMIT = int(os.environ.get("RZ_SFT_LIMIT", "4000"))
 GRPO_STEPS = int(os.environ.get("RZ_GRPO_STEPS", "50"))
 GRPO_LIMIT = int(os.environ.get("RZ_GRPO_LIMIT", "512"))
 MAX_NEW = int(os.environ.get("RZ_MAX_NEW_TOKENS", "512"))
+# Skip A0 re-eval by default (same seed/val slice already measured at 65% / 48.91 toks).
+SKIP_A0 = os.environ.get("RZ_SKIP_A0", "1") == "1"
+A0_CACHE = {
+    "model": MODEL,
+    "thinking": True,
+    "n": VAL_LIMIT,
+    "accuracy": 0.65,
+    "malformed_rate": 0.01,
+    "mean_reasoning_tokens": 48.91,
+    "median_reasoning_tokens": 1,
+    "wall_clock_s": 0.0,
+    "max_new_tokens": MAX_NEW,
+    "seed": 42,
+    "cached": True,
+}
 
 
 def run(cmd: list[str], cwd: Path | None = None, env: dict | None = None) -> None:
@@ -119,8 +134,12 @@ def main() -> None:
         "--load-in-4bit",
         "--thinking",
     ]
-    print("[stage_b] A0 thinking-on baseline", flush=True)
-    py([*eval_common, "--output", str(OUT / "a0_thinking_on.jsonl")])
+    if SKIP_A0:
+        print("[stage_b] A0 skipped (using cached baseline metrics)", flush=True)
+        (OUT / "a0_thinking_on.summary.json").write_text(json.dumps(A0_CACHE, indent=2))
+    else:
+        print("[stage_b] A0 thinking-on baseline", flush=True)
+        py([*eval_common, "--output", str(OUT / "a0_thinking_on.jsonl")])
 
     # ---- B1 SFT ----
     sft_dir = CKPT / "b1_sft"
