@@ -3,6 +3,10 @@
   "thinking": true,
   "n": 100,
   "accuracy": 0.74,
+  "malformed_rate": 0.0,
   "mean_reasoning_tokens": 21.48,
-  "note": "from stage-b v4 before GRPO crash"
+  "median_reasoning_tokens": 22,
+  "wall_clock_s": 262.88163462299985,
+  "max_new_tokens": 512,
+  "seed": 42
 }

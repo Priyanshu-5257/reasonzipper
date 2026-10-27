@@ -1,0 +1,57 @@
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "val_limit": 100,
+  "sft_steps": 150,
+  "grpo_steps": 50,
+  "a0": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
+    "accuracy": 0.65,
+    "malformed_rate": 0.01,
+    "mean_reasoning_tokens": 48.91,
+    "median_reasoning_tokens": 1,
+    "wall_clock_s": 0.0,
+    "max_new_tokens": 512,
+    "seed": 42,
+    "cached": true
+  },
+  "b1": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
+    "accuracy": 0.74,
+    "malformed_rate": 0.0,
+    "mean_reasoning_tokens": 21.48,
+    "median_reasoning_tokens": 22,
+    "wall_clock_s": 262.88163462299985,
+    "max_new_tokens": 512,
+    "seed": 42
+  },
+  "b2": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
+    "accuracy": 0.75,
+    "malformed_rate": 0.0,
+    "mean_reasoning_tokens": 21.42,
+    "median_reasoning_tokens": 22,
+    "wall_clock_s": 258.94141540600003,
+    "max_new_tokens": 512,
+    "seed": 42
+  },
+  "b1_vs_a0": {
+    "acc_delta": 0.08999999999999997,
+    "reasoning_token_reduction": 0.5608260069515436
+  },
+  "b2_vs_a0": {
+    "acc_delta": 0.09999999999999998,
+    "reasoning_token_reduction": 0.5620527499488857
+  },
+  "poc_target": {
+    "min_token_reduction": 0.3,
+    "max_acc_drop_pp": 0.02
+  },
+  "gate_b_pass": true,
+  "wall_clock_total_s": 1686.5471963882446
+}
