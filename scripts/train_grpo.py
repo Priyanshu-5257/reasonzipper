@@ -17,7 +17,11 @@ if str(ROOT) not in sys.path:
 
 from reasonzipper.metrics import extract_reasoning_span, score_prediction
 from reasonzipper.reward import correctness_first_rewards
-from reasonzipper.t4_train import cast_trainable_away_from_bf16, force_t4_fp16_env
+from reasonzipper.t4_train import (
+    cast_trainable_away_from_bf16,
+    force_t4_fp16_env,
+    t4_training_precision_kwargs,
+)
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -155,9 +159,7 @@ def main() -> None:
         "logging_steps": 5,
         "save_steps": int(tcfg.get("eval_every", 50)),
         "save_total_limit": 2,
-        "fp16": True,
-        "bf16": False,
-        "tf32": False,
+        **t4_training_precision_kwargs(),
         "max_steps": max_steps,
         "report_to": [],
         "seed": seed,
@@ -174,7 +176,7 @@ def main() -> None:
         "scale_rewards": bool(tcfg.get("scale_rewards", False)),
         "loss_type": tcfg.get("loss_type", "dr_grpo"),
         "gradient_checkpointing": True,
-        "tf32": False,
+        **t4_training_precision_kwargs(),
     }
     for k, v in optional.items():
         if k in sig.parameters:

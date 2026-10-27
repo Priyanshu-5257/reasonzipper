@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from reasonzipper.t4_train import force_t4_fp16_env, prepare_qlora_for_t4
+from reasonzipper.t4_train import (
+    force_t4_fp16_env,
+    prepare_qlora_for_t4,
+    t4_training_precision_kwargs,
+)
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -114,9 +118,7 @@ def main() -> None:
         "logging_steps": 10,
         "save_steps": int(tcfg.get("eval_every_steps", 200)),
         "save_total_limit": 2,
-        "fp16": True,
-        "bf16": False,
-        "tf32": False,
+        **t4_training_precision_kwargs(),
         "max_length": int(tcfg["max_seq_len"]),
         "max_seq_length": int(tcfg["max_seq_len"]),
         "gradient_checkpointing": True,
@@ -149,7 +151,7 @@ def main() -> None:
         "n_train": len(rows),
         "max_steps": max_steps,
         "output_dir": str(args.output_dir),
-        "mixed_precision": "fp16",
+        "mixed_precision": "off",
     }
     (args.output_dir / "train_meta.json").write_text(json.dumps(meta, indent=2))
     print(f"[sft] saved adapter -> {args.output_dir}", flush=True)
