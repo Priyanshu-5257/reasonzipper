@@ -41,6 +41,11 @@ def main() -> None:
     model_name = args.model or cfg["model_name"]
     seed = args.seed if args.seed is not None else cfg.get("seed", 42)
 
+    import os
+
+    # Avoid Trainer wrapping with DataParallel on multi-GPU boxes (Kaggle 2xT4).
+    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+
     import torch
     from datasets import Dataset
     from peft import LoraConfig
@@ -81,7 +86,7 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb,
-        device_map="cuda:0",
+        device_map="auto",
         trust_remote_code=True,
     )
     model.config.use_cache = False

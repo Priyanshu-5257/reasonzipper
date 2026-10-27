@@ -61,6 +61,8 @@ def main() -> None:
     env["PYTHONPATH"] = str(REPO)
     env["PYTHONUNBUFFERED"] = "1"
     env["HF_HOME"] = str(WORK / "hf_cache")
+    # TRL SFT/GRPO refuse nn.DataParallel when 2 T4s are visible to one process.
+    env["CUDA_VISIBLE_DEVICES"] = "0"
     Path(env["HF_HOME"]).mkdir(parents=True, exist_ok=True)
 
     def py(args: list[str]) -> None:

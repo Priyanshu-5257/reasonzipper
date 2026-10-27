@@ -50,6 +50,10 @@ def main() -> None:
     group_size = int(tcfg.get("group_size", 4))
     max_steps = args.max_steps if args.max_steps is not None else int(tcfg.get("max_updates", 100))
 
+    import os
+
+    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+
     import torch
     from datasets import Dataset
     from peft import LoraConfig, PeftModel
@@ -100,7 +104,7 @@ def main() -> None:
     base = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb,
-        device_map="cuda:0",
+        device_map="auto",
         trust_remote_code=True,
     )
     model = PeftModel.from_pretrained(base, str(args.sft_adapter), is_trainable=True)
