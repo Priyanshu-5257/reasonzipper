@@ -1,0 +1,19 @@
+# Stage B2 — correctness-first length GRPO
+seed: 42
+model_name: Qwen/Qwen3-1.7B
+
+train:
+  method: grpo
+  group_size: 4
+  beta: 0.0
+  scale_rewards: false
+  loss_type: dr_grpo
+  alpha: 0.2
+  length_budget_B: 512
+  max_updates: 300
+  eval_every: 50
+  max_completion_tokens: 512
+  lora_r: 16
+  lora_alpha: 32
+  microbatch: 1
+  grad_accum: 8

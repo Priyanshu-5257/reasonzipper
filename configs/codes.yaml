@@ -1,0 +1,17 @@
+# Stage C — discrete reasoning tokens
+seed: 42
+model_name: Qwen/Qwen3-1.7B
+
+codes:
+  n_tokens: 128
+  token_pattern: "<|r{idx:03d}|>"
+  max_codes_per_solution: 16
+  codes_per_block: 2
+
+train:
+  method: code_student
+  lr: 1.0e-4
+  lora_r: 16
+  checkpoint_aux_weight: 0.1
+  answer_sft: true
+  answer_kl: false  # enable after offline logit cache works on T4

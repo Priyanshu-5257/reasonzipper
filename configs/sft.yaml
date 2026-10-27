@@ -1,0 +1,17 @@
+# Stage B1 — short-CoT / answer SFT (filled in when training lands)
+seed: 42
+model_name: Qwen/Qwen3-1.7B
+base_config: configs/baseline.yaml
+
+train:
+  method: sft_short_cot
+  epochs: 1
+  lr: 1.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, v_proj, o_proj]
+  microbatch: 1
+  grad_accum: 8
+  max_seq_len: 768
+  eval_every_steps: 200

@@ -1,0 +1,31 @@
+seed: 42
+model_name: Qwen/Qwen3-1.7B
+smoke_model_name: Qwen/Qwen3-0.6B
+
+data:
+  output_dir: data
+  n_train: 8000
+  n_val: 1000
+  n_test_id: 1000
+  n_test_ood: 2000
+
+eval:
+  max_new_tokens: 512
+  temperature: 0.6
+  top_p: 0.95
+  val_preview_n: 250
+  thinking_on: true
+
+train:
+  # Stage B defaults (unused in Stage A)
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  microbatch: 1
+  grad_accum: 8
+  max_seq_len: 768
+  lr: 1.0e-4
+
+paths:
+  artifacts: artifacts
+  reports: artifacts/reports

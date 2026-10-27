@@ -1,0 +1,5 @@
+# Lightweight deps for dataset generation + unit tests (no GPU)
+pyyaml>=6.0
+numpy>=1.26.0
+pytest>=8.0.0
+tqdm>=4.66.0

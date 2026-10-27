@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Data & artifacts (keep structure via .gitkeep)
+data/**/*.json
+data/**/*.jsonl
+data/**/*.parquet
+!data/**/.gitkeep
+artifacts/**
+!artifacts/**/
+!artifacts/**/.gitkeep
+
+# Model / cache
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.pth
+*.ckpt
+*.adapter
+wandb/
+runs/
+outputs/
+hf_cache/
+.cache/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Kaggle / local secrets
+kaggle.json
+*.pem
+credentials.json
+environment.json
+requirements.lock

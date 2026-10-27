@@ -1,0 +1,17 @@
+torch>=2.2.0
+transformers>=4.51.0
+datasets>=3.0.0
+accelerate>=0.34.0
+peft>=0.14.0
+trl>=0.15.0
+bitsandbytes>=0.45.0
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+pyyaml>=6.0
+numpy>=1.26.0
+pandas>=2.2.0
+tqdm>=4.66.0
+pytest>=8.0.0
+huggingface_hub>=0.26.0
+safetensors>=0.4.0
+vllm>=0.6.0; platform_system!="Darwin"
