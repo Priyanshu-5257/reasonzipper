@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -13,6 +14,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from reasonzipper.t4_train import force_t4_fp16_env, prepare_qlora_for_t4
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -41,10 +44,7 @@ def main() -> None:
     model_name = args.model or cfg["model_name"]
     seed = args.seed if args.seed is not None else cfg.get("seed", 42)
 
-    import os
-
-    # Avoid Trainer wrapping with DataParallel on multi-GPU boxes (Kaggle 2xT4).
-    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+    force_t4_fp16_env()
 
     import torch
     from datasets import Dataset
@@ -83,13 +83,13 @@ def main() -> None:
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
     )
-    model = AutoModelForCausalLM.from_pretrained(
+    base = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb,
         device_map="auto",
+        torch_dtype=torch.float16,
         trust_remote_code=True,
     )
-    model.config.use_cache = False
 
     peft_config = LoraConfig(
         r=int(tcfg["lora_r"]),
@@ -99,10 +99,10 @@ def main() -> None:
         bias="none",
         task_type="CAUSAL_LM",
     )
+    model = prepare_qlora_for_t4(base, peft_config)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     max_steps = args.max_steps
-    import inspect
 
     raw_kwargs = {
         "output_dir": str(args.output_dir),
@@ -116,6 +116,7 @@ def main() -> None:
         "save_total_limit": 2,
         "fp16": True,
         "bf16": False,
+        "tf32": False,
         "max_length": int(tcfg["max_seq_len"]),
         "max_seq_length": int(tcfg["max_seq_len"]),
         "gradient_checkpointing": True,
@@ -123,18 +124,18 @@ def main() -> None:
         "seed": seed,
         "dataset_text_field": "text",
         "packing": False,
+        "optim": "adamw_torch",
     }
     sig = inspect.signature(SFTConfig.__init__)
     sft_kwargs = {k: v for k, v in raw_kwargs.items() if k in sig.parameters}
     sft_args = SFTConfig(**sft_kwargs)
 
+    # Already PEFT-wrapped — do not pass peft_config again.
     trainer_kwargs = dict(
         model=model,
         args=sft_args,
         train_dataset=ds,
-        peft_config=peft_config,
     )
-    # TRL version skew: processing_class vs tokenizer
     try:
         trainer = SFTTrainer(processing_class=tokenizer, **trainer_kwargs)
     except TypeError:
@@ -148,6 +149,7 @@ def main() -> None:
         "n_train": len(rows),
         "max_steps": max_steps,
         "output_dir": str(args.output_dir),
+        "mixed_precision": "fp16",
     }
     (args.output_dir / "train_meta.json").write_text(json.dumps(meta, indent=2))
     print(f"[sft] saved adapter -> {args.output_dir}", flush=True)

@@ -63,6 +63,8 @@ def main() -> None:
     env["HF_HOME"] = str(WORK / "hf_cache")
     # TRL SFT/GRPO refuse nn.DataParallel when 2 T4s are visible to one process.
     env["CUDA_VISIBLE_DEVICES"] = "0"
+    # T4 has no BF16 amp path — force FP16 mixed precision everywhere.
+    env["ACCELERATE_MIXED_PRECISION"] = "fp16"
     Path(env["HF_HOME"]).mkdir(parents=True, exist_ok=True)
 
     def py(args: list[str]) -> None:

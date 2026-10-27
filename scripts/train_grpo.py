@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 from reasonzipper.metrics import extract_reasoning_span, score_prediction
 from reasonzipper.reward import correctness_first_rewards
+from reasonzipper.t4_train import cast_trainable_away_from_bf16, force_t4_fp16_env
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -50,13 +51,11 @@ def main() -> None:
     group_size = int(tcfg.get("group_size", 4))
     max_steps = args.max_steps if args.max_steps is not None else int(tcfg.get("max_updates", 100))
 
-    import os
-
-    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+    force_t4_fp16_env()
 
     import torch
     from datasets import Dataset
-    from peft import LoraConfig, PeftModel
+    from peft import PeftModel, prepare_model_for_kbit_training
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from trl import GRPOConfig, GRPOTrainer
 
@@ -105,9 +104,13 @@ def main() -> None:
         model_name,
         quantization_config=bnb,
         device_map="auto",
+        torch_dtype=torch.float16,
         trust_remote_code=True,
     )
+    base.config.torch_dtype = torch.float16
+    base = prepare_model_for_kbit_training(base, use_gradient_checkpointing=True)
     model = PeftModel.from_pretrained(base, str(args.sft_adapter), is_trainable=True)
+    cast_trainable_away_from_bf16(model)
     model.config.use_cache = False
 
     def reward_fn(completions, first_error_line, **kwargs):
@@ -154,6 +157,7 @@ def main() -> None:
         "save_total_limit": 2,
         "fp16": True,
         "bf16": False,
+        "tf32": False,
         "max_steps": max_steps,
         "report_to": [],
         "seed": seed,
@@ -161,6 +165,7 @@ def main() -> None:
         "max_completion_length": int(tcfg.get("max_completion_tokens", 512)),
         "temperature": 0.6,
         "top_p": 0.95,
+        "optim": "adamw_torch",
     }
     # Optional newer fields
     sig = inspect.signature(GRPOConfig.__init__)
@@ -169,10 +174,12 @@ def main() -> None:
         "scale_rewards": bool(tcfg.get("scale_rewards", False)),
         "loss_type": tcfg.get("loss_type", "dr_grpo"),
         "gradient_checkpointing": True,
+        "tf32": False,
     }
     for k, v in optional.items():
         if k in sig.parameters:
             cfg_kwargs[k] = v
+    cfg_kwargs = {k: v for k, v in cfg_kwargs.items() if k in sig.parameters}
 
     grpo_args = GRPOConfig(**cfg_kwargs)
     args.output_dir.mkdir(parents=True, exist_ok=True)
