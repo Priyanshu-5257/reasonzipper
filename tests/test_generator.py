@@ -46,3 +46,23 @@ def test_small_dataset_splits():
     id_t = {e.template_id for s in ("train", "val", "test_id") for e in ds[s]}
     ood_t = {e.template_id for e in ds["test_ood"]}
     assert not id_t & ood_t
+
+
+def test_full_default_counts_no_hang():
+    # Regression: wrong_sign on 0 used to infinite-loop during OOD generation.
+    ds = generate_dataset(
+        seed=42, n_train=8000, n_val=1000, n_test_id=1000, n_test_ood=2000
+    )
+    assert sum(len(v) for v in ds.values()) == 12000
+
+
+def test_zero_value_wrong_sign_case():
+    ex = make_example(
+        ex_id="test_ood_fraction_mul_sub_00173",
+        template_id="fraction_mul_sub",
+        split="test_ood",
+        seed=42,
+        mode="single",
+    )
+    assert ex.first_error_line != "NONE" or ex.gold_answer == "ERROR_LINE=NONE"
+    assert 3 <= len(ex.solution_lines) <= 5

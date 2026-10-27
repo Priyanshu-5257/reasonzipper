@@ -54,6 +54,7 @@ def main() -> None:
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO)
+    env["PYTHONUNBUFFERED"] = "1"
     # Prefer HF cache on working/temp
     env["HF_HOME"] = str(WORK / "hf_cache")
     Path(env["HF_HOME"]).mkdir(parents=True, exist_ok=True)

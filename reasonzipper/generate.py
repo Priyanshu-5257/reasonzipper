@@ -317,17 +317,23 @@ BUILDERS: dict[str, Builder] = {
 def _corrupt_value(rng: random.Random, true: Any, error_type: ErrorType) -> Any:
     t = _frac(true)
     if error_type == "wrong_sign":
-        return -t
+        # -0 == 0; fall through to a guaranteed nonzero delta
+        if t != 0:
+            return -t
+        return Fraction(1)
     if error_type == "order_of_operations":
         # nudge by combining operands wrongly-ish: off-by product/sum noise
-        return t + rng.choice([1, 2, -1, t])
+        cand = t + rng.choice([1, 2, -1])
+        return cand if cand != t else t + 1
     if error_type == "fraction":
         if t.denominator != 1:
-            return Fraction(t.numerator + rng.choice([1, -1]), t.denominator)
+            cand = Fraction(t.numerator + rng.choice([1, -1]), t.denominator)
+            return cand if cand != t else Fraction(t.numerator + 2, t.denominator)
         return t + Fraction(1, 2)
     # arithmetic / invalid_transform default: off-by-k
     delta = rng.choice([1, 2, 3, -1, -2, 10])
-    return t + delta
+    cand = t + delta
+    return cand if cand != t else t + 1
 
 
 def _rewrite_line_result(line: str, new_val: Any) -> str:
@@ -387,8 +393,13 @@ def inject_error(
         et = rng.choice(["fraction", "arithmetic"])
 
     wrong_primary = _corrupt_value(rng, steps[primary_idx].expected, et)
-    while _frac(wrong_primary) == _frac(steps[primary_idx].expected):
-        wrong_primary = _corrupt_value(rng, steps[primary_idx].expected, et)
+    # Hard guarantee (e.g. wrong_sign on 0); never spin forever
+    for _ in range(8):
+        if _frac(wrong_primary) != _frac(steps[primary_idx].expected):
+            break
+        wrong_primary = _corrupt_value(rng, steps[primary_idx].expected, "arithmetic")
+    if _frac(wrong_primary) == _frac(steps[primary_idx].expected):
+        wrong_primary = _frac(steps[primary_idx].expected) + 1
 
     # Optional second independent error on a later line (still first-error = primary)
     second_idx = None
