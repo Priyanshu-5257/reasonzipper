@@ -1,0 +1,12 @@
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "thinking": true,
+  "n": 100,
+  "accuracy": 0.65,
+  "malformed_rate": 0.01,
+  "mean_reasoning_tokens": 48.91,
+  "median_reasoning_tokens": 1,
+  "wall_clock_s": 1323.1197516539999,
+  "max_new_tokens": 512,
+  "seed": 42
+}

@@ -1,0 +1,32 @@
+{
+  "val_limit": 100,
+  "model": "Qwen/Qwen3-1.7B",
+  "thinking_on": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
+    "accuracy": 0.65,
+    "malformed_rate": 0.01,
+    "mean_reasoning_tokens": 48.91,
+    "median_reasoning_tokens": 1,
+    "wall_clock_s": 1323.1197516539999,
+    "max_new_tokens": 512,
+    "seed": 42
+  },
+  "thinking_off": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": false,
+    "n": 100,
+    "accuracy": 0.28,
+    "malformed_rate": 0.0,
+    "mean_reasoning_tokens": 0.0,
+    "median_reasoning_tokens": 0,
+    "wall_clock_s": 103.64820066700008,
+    "max_new_tokens": 512,
+    "seed": 42
+  },
+  "accuracy_delta_thinking_minus_direct": 0.37,
+  "gate_a_pass": true,
+  "wall_clock_total_s": 1523.7326571941376,
+  "note": "Pass if thinking-on materially beats thinking-off (threshold: +2pp absolute on this preview)."
+}

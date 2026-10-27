@@ -29,6 +29,9 @@ data/**/*.parquet
 artifacts/**
 !artifacts/**/
 !artifacts/**/.gitkeep
+!artifacts/reports/**
+artifacts/reports/**/hf_cache/
+artifacts/reports/**/data/
 
 # Model / cache
 *.bin
