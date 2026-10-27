@@ -99,10 +99,17 @@ def main() -> None:
     reasoning_token_counts = []
     t0 = time.perf_counter()
 
-    for row in rows:
+    log_every = max(1, min(10, len(rows) // 10 or 1))
+    print(
+        f"[eval] start model={model_name} thinking={args.thinking} "
+        f"n={len(rows)} max_new={max_new} 4bit={args.load_in_4bit}",
+        flush=True,
+    )
+    for i, row in enumerate(rows, start=1):
         user = build_prompt(row["problem"], row["solution_lines"], thinking=args.thinking)
         prompt = apply_chat_template(tokenizer, user, enable_thinking=args.thinking)
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        step_t0 = time.perf_counter()
         with torch.no_grad():
             gen_kwargs = {
                 "max_new_tokens": max_new,
@@ -131,6 +138,15 @@ def main() -> None:
                 **tok_stats,
             }
         )
+        if i % log_every == 0 or i == len(rows):
+            acc = n_correct / i
+            print(
+                f"[eval] {i}/{len(rows)} acc={acc:.3f} "
+                f"last_r_toks={tok_stats['reasoning_tokens']} "
+                f"step_s={time.perf_counter() - step_t0:.1f} "
+                f"elapsed_s={time.perf_counter() - t0:.1f}",
+                flush=True,
+            )
 
     elapsed = time.perf_counter() - t0
     summary = {
