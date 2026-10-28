@@ -25,14 +25,19 @@ INPUT_ROOT = Path("/kaggle/input")
 
 MODEL = os.environ.get("RZ_MODEL", "Qwen/Qwen3-1.7B")
 MAX_NEW = int(os.environ.get("RZ_MAX_NEW_TOKENS", "256"))
-# Optional caps for smoke; default = full sealed sets
+# Optional global caps (apply to every model if set)
 LIMIT_ID = os.environ.get("RZ_LIMIT_ID")
 LIMIT_OOD = os.environ.get("RZ_LIMIT_OOD")
 LIMIT_PB = os.environ.get("RZ_LIMIT_PROCESSBENCH")
-# Which models to run (comma-separated): a0,c1,c3
+# A0 thinking is ~10× slower than code students on T4; default subsample for A0 only.
+# C1/C3 still run full sealed sets unless RZ_LIMIT_* is set.
+A0_LIMIT_ID = os.environ.get("RZ_A0_LIMIT_ID", "1000")
+A0_LIMIT_OOD = os.environ.get("RZ_A0_LIMIT_OOD", "500")
+A0_LIMIT_PB = os.environ.get("RZ_A0_LIMIT_PROCESSBENCH", "400")
+# Fast models first so we still get C3 sealed numbers if time runs out.
 MODELS = [
     m.strip()
-    for m in os.environ.get("RZ_SEALED_MODELS", "a0,c1,c3").split(",")
+    for m in os.environ.get("RZ_SEALED_MODELS", "c3,c1,a0").split(",")
     if m.strip()
 ]
 
@@ -160,8 +165,23 @@ def main() -> None:
         "processbench": (pb_dir / "examples.jsonl", LIMIT_PB),
     }
 
+    def limits_for(tag: str) -> dict[str, str | None]:
+        if tag.startswith("a0"):
+            return {
+                "test_id": LIMIT_ID or A0_LIMIT_ID,
+                "test_ood": LIMIT_OOD or A0_LIMIT_OOD,
+                "processbench": LIMIT_PB or A0_LIMIT_PB,
+            }
+        return {
+            "test_id": LIMIT_ID,
+            "test_ood": LIMIT_OOD,
+            "processbench": LIMIT_PB,
+        }
+
     def eval_one(tag: str, adapter: Path | None, tokenizer_dir: Path | None) -> None:
-        for split, (path, lim) in splits.items():
+        lims = limits_for(tag)
+        print(f"[sealed] limits for {tag}: {lims}", flush=True)
+        for split, (path, _) in splits.items():
             out = OUT / f"{tag}__{split}.jsonl"
             cmd = [
                 "scripts/eval_model.py",
@@ -180,6 +200,7 @@ def main() -> None:
                 "--output",
                 str(out),
             ]
+            lim = lims.get(split)
             if lim:
                 cmd.extend(["--limit", str(int(lim))])
             if adapter is not None:
@@ -189,12 +210,16 @@ def main() -> None:
             print(f"[sealed] eval {tag} / {split}", flush=True)
             py(cmd)
 
-    if "a0" in MODELS:
-        eval_one("a0_thinking", adapter=None, tokenizer_dir=None)
-    if "c1" in MODELS:
-        eval_one("c1_codes", adapter=c1_dir, tokenizer_dir=tok_dir)
-    if "c3" in MODELS:
-        eval_one("c3_grpo", adapter=c3_dir, tokenizer_dir=tok_dir)
+    # Order follows MODELS (default: c3, c1, a0)
+    for m in MODELS:
+        if m == "c3":
+            eval_one("c3_grpo", adapter=c3_dir, tokenizer_dir=tok_dir)
+        elif m == "c1":
+            eval_one("c1_codes", adapter=c1_dir, tokenizer_dir=tok_dir)
+        elif m == "a0":
+            eval_one("a0_thinking", adapter=None, tokenizer_dir=None)
+        else:
+            print(f"[sealed] unknown model tag {m}, skip", flush=True)
 
     py(
         [
