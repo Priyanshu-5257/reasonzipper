@@ -1,0 +1,734 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.3), please consider upgrading to the latest version (2.2.5)
++ git clone --depth 1 https://github.com/Priyanshu-5257/reasonzipper.git /kaggle/working/reasonzipper
+Cloning into '/kaggle/working/reasonzipper'...
++ /usr/bin/python3 -m pip install -q pyyaml pytest peft trl bitsandbytes accelerate datasets
++ /usr/bin/python3 scripts/check_environment.py --output /kaggle/working/artifacts/reports/sealed/environment.json
+{
+  "timestamp": "2026-10-28T07:01:17.467135+00:00",
+  "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+  "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+  "git_sha": "1c39fd56a04734a2becb4caff02b81459963f221",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.16.1",
+    "datasets": "4.8.5",
+    "peft": "0.20.0",
+    "trl": "1.16.0",
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.50.2",
+    "yaml": "6.0.3",
+    "numpy": "2.1.3"
+  },
+  "cuda_available": true,
+  "cuda_version": "12.8",
+  "gpu_count": 1,
+  "gpus": [
+    {
+      "index": 0,
+      "name": "Tesla T4",
+      "total_memory_gb": 14.56
+    }
+  ]
+}
+Wrote /kaggle/working/artifacts/reports/sealed/environment.json
++ /usr/bin/python3 -m pytest -q
+........................                                                 [100%]
+24 passed in 0.70s
+[sealed] scanning /kaggle/input ...
+  input: /kaggle/input/notebooks
+[sealed] c3=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c3_grpo c1=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c1_codes tok=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/tokenizer_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/tokenizer_codes -> /kaggle/working/artifacts/checkpoints/tokenizer_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c1_codes -> /kaggle/working/artifacts/checkpoints/c1_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c3_grpo -> /kaggle/working/artifacts/checkpoints/c3_grpo
+[sealed] generate synthetic data (seed from config; test never used for tuning)
++ /usr/bin/python3 scripts/generate_math_errors.py --config configs/baseline.yaml --output-dir /kaggle/working/data
+Wrote dataset to /kaggle/working/data
+{'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
++ /usr/bin/python3 scripts/validate_dataset.py --data-dir /kaggle/working/data
+counts: {'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
+id_templates: ['add_chain', 'div_chain', 'fraction_add', 'linear_eq', 'mul_chain', 'order_ops', 'percent_of', 'sub_chain', 'word_two_step']
+ood_templates: ['fraction_mul_sub', 'mixed_ops_linear', 'nested_order_ops', 'percent_then_eq', 'word_three_step']
+OK: all splits validated
+[sealed] prep ProcessBench
++ /usr/bin/python3 scripts/prep_processbench.py --output-dir /kaggle/working/data/processbench
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating gsm8k split:   0%|          | 0/400 [00:00<?, ? examples/s]Generating gsm8k split: 100%|ââââââââââ| 400/400 [00:00<00:00, 8636.25 examples/s]
+Generating math split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating math split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 34544.62 examples/s]
+Generating olympiadbench split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating olympiadbench split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 23935.99 examples/s]
+Generating omnimath split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating omnimath split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 31065.93 examples/s]
+[processbench] gsm8k: 400 -> /kaggle/working/data/processbench/gsm8k.jsonl
+[processbench] math: 1000 -> /kaggle/working/data/processbench/math.jsonl
+[processbench] olympiadbench: 1000 -> /kaggle/working/data/processbench/olympiadbench.jsonl
+[processbench] omnimath: 1000 -> /kaggle/working/data/processbench/omnimath.jsonl
+[processbench] wrote 3400 rows -> /kaggle/working/data/processbench/examples.jsonl
+[sealed] limits for c3_grpo: {'test_id': None, 'test_ood': None, 'processbench': None}
+[sealed] eval c3_grpo / test_id
++ /usr/bin/python3 scripts/eval_model.py --config configs/baseline.yaml --model Qwen/Qwen3-1.7B --data /kaggle/working/data/test_id/examples.jsonl --max-new-tokens 256 --device cuda:0 --load-in-4bit --thinking --output /kaggle/working/artifacts/reports/sealed/c3_grpo__test_id.jsonl --adapter /kaggle/working/artifacts/checkpoints/c3_grpo --tokenizer-dir /kaggle/working/artifacts/checkpoints/tokenizer_codes
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|âââââ     | 1/2 [00:04<00:04,  4.14s/it]Fetching 2 files: 100%|ââââââââââ| 2/2 [00:08<00:00,  4.17s/it]Fetching 2 files: 100%|ââââââââââ| 2/2 [00:08<00:00,  4.17s/it]
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<01:14,  4.13it/s]Loading weights:   1%|          | 2/311 [00:00<00:58,  5.28it/s]Loading weights:   1%|â         | 4/311 [00:00<00:54,  5.59it/s]Loading weights:  12%|ââ        | 37/311 [00:00<00:03, 70.20it/s]Loading weights:  23%|âââ       | 70/311 [00:00<00:01, 127.58it/s]Loading weights:  33%|ââââ      | 104/311 [00:01<00:01, 175.43it/s]Loading weights:  44%|âââââ     | 137/311 [00:01<00:00, 211.91it/s]Loading weights:  55%|ââââââ    | 170/311 [00:01<00:00, 242.22it/s]Loading weights:  65%|âââââââ   | 203/311 [00:01<00:00, 264.86it/s]Loading weights:  76%|ââââââââ  | 237/311 [00:01<00:00, 280.22it/s]Loading weights:  87%|âââââââââ | 270/311 [00:01<00:00, 293.12it/s]Loading weights:  97%|ââââââââââ| 303/311 [00:01<00:00, 301.61it/s]Loading weights: 100%|ââââââââââ| 311/311 [00:01<00:00, 185.06it/s]
+[eval] resize embeddings 151936 -> 151797
+[eval] loading adapter /kaggle/working/artifacts/checkpoints/c3_grpo
+[eval] start model=Qwen/Qwen3-1.7B thinking=True n=1000 max_new=256 4bit=True
+[eval] 10/1000 acc=0.800 last_r_toks=4 step_s=1.2 elapsed_s=15.8
+[eval] 20/1000 acc=0.850 last_r_toks=4 step_s=1.2 elapsed_s=29.3
+[eval] 30/1000 acc=0.767 last_r_toks=3 step_s=1.1 elapsed_s=41.7
+[eval] 40/1000 acc=0.775 last_r_toks=7 step_s=1.6 elapsed_s=54.8
+[eval] 50/1000 acc=0.780 last_r_toks=3 step_s=1.1 elapsed_s=68.1
+[eval] 60/1000 acc=0.767 last_r_toks=6 step_s=1.4 elapsed_s=81.0
+[eval] 70/1000 acc=0.771 last_r_toks=4 step_s=1.2 elapsed_s=93.6
+[eval] 80/1000 acc=0.762 last_r_toks=4 step_s=1.2 elapsed_s=106.1
+[eval] 90/1000 acc=0.778 last_r_toks=4 step_s=1.2 elapsed_s=118.4
+[eval] 100/1000 acc=0.780 last_r_toks=4 step_s=1.2 elapsed_s=131.5
+[eval] 110/1000 acc=0.764 last_r_toks=3 step_s=1.1 elapsed_s=144.4
+[eval] 120/1000 acc=0.750 last_r_toks=7 step_s=1.5 elapsed_s=157.5
+[eval] 130/1000 acc=0.738 last_r_toks=4 step_s=1.2 elapsed_s=170.2
+[eval] 140/1000 acc=0.736 last_r_toks=4 step_s=1.2 elapsed_s=183.4
+[eval] 150/1000 acc=0.747 last_r_toks=3 step_s=1.1 elapsed_s=196.1
+[eval] 160/1000 acc=0.750 last_r_toks=4 step_s=1.2 elapsed_s=209.5
+[eval] 170/1000 acc=0.741 last_r_toks=3 step_s=1.1 elapsed_s=222.7
+[eval] 180/1000 acc=0.739 last_r_toks=4 step_s=1.2 elapsed_s=235.8
+[eval] 190/1000 acc=0.737 last_r_toks=6 step_s=1.4 elapsed_s=248.9
+[eval] 200/1000 acc=0.740 last_r_toks=6 step_s=1.4 elapsed_s=261.6
+[eval] 210/1000 acc=0.743 last_r_toks=6 step_s=1.5 elapsed_s=274.8
+[eval] 220/1000 acc=0.741 last_r_toks=4 step_s=1.2 elapsed_s=287.6
+[eval] 230/1000 acc=0.748 last_r_toks=4 step_s=1.2 elapsed_s=301.2
+[eval] 240/1000 acc=0.750 last_r_toks=4 step_s=1.2 elapsed_s=313.1
+[eval] 250/1000 acc=0.752 last_r_toks=4 step_s=1.2 elapsed_s=326.2
+[eval] 260/1000 acc=0.746 last_r_toks=3 step_s=1.1 elapsed_s=338.0
+[eval] 270/1000 acc=0.741 last_r_toks=4 step_s=1.2 elapsed_s=350.2
+[eval] 280/1000 acc=0.739 last_r_toks=6 step_s=1.4 elapsed_s=362.5
+[eval] 290/1000 acc=0.738 last_r_toks=7 step_s=1.5 elapsed_s=376.5
+[eval] 300/1000 acc=0.740 last_r_toks=3 step_s=1.1 elapsed_s=388.1
+[eval] 310/1000 acc=0.748 last_r_toks=5 step_s=1.3 elapsed_s=401.1
+[eval] 320/1000 acc=0.750 last_r_toks=4 step_s=1.2 elapsed_s=414.4
+[eval] 330/1000 acc=0.745 last_r_toks=7 step_s=1.5 elapsed_s=427.3
+[eval] 340/1000 acc=0.744 last_r_toks=4 step_s=1.2 elapsed_s=441.1
+[eval] 350/1000 acc=0.751 last_r_toks=4 step_s=1.2 elapsed_s=453.6
+[eval] 360/1000 acc=0.758 last_r_toks=3 step_s=1.1 elapsed_s=466.2
+[eval] 370/1000 acc=0.762 last_r_toks=4 step_s=1.2 elapsed_s=479.1
+[eval] 380/1000 acc=0.761 last_r_toks=4 step_s=1.2 elapsed_s=492.3
+[eval] 390/1000 acc=0.762 last_r_toks=4 step_s=1.2 elapsed_s=505.1
+[eval] 400/1000 acc=0.767 last_r_toks=4 step_s=1.2 elapsed_s=517.8
+[eval] 410/1000 acc=0.773 last_r_toks=6 step_s=1.4 elapsed_s=530.9
+[eval] 420/1000 acc=0.774 last_r_toks=6 step_s=1.4 elapsed_s=543.5
+[eval] 430/1000 acc=0.767 last_r_toks=4 step_s=1.2 elapsed_s=556.0
+[eval] 440/1000 acc=0.764 last_r_toks=3 step_s=1.1 elapsed_s=568.3
+[eval] 450/1000 acc=0.764 last_r_toks=3 step_s=1.1 elapsed_s=581.3
+[eval] 460/1000 acc=0.770 last_r_toks=3 step_s=1.1 elapsed_s=594.8
+[eval] 470/1000 acc=0.768 last_r_toks=3 step_s=1.1 elapsed_s=607.6
+[eval] 480/1000 acc=0.771 last_r_toks=3 step_s=1.1 elapsed_s=620.3
+[eval] 490/1000 acc=0.763 last_r_toks=8 step_s=1.6 elapsed_s=633.8
+[eval] 500/1000 acc=0.766 last_r_toks=5 step_s=1.3 elapsed_s=647.1
+[eval] 510/1000 acc=0.757 last_r_toks=3 step_s=1.1 elapsed_s=659.9
+[eval] 520/1000 acc=0.758 last_r_toks=4 step_s=1.2 elapsed_s=672.9
+[eval] 530/1000 acc=0.762 last_r_toks=7 step_s=1.5 elapsed_s=686.8
+[eval] 540/1000 acc=0.763 last_r_toks=6 step_s=1.4 elapsed_s=699.4
+[eval] 550/1000 acc=0.762 last_r_toks=6 step_s=1.4 elapsed_s=711.8
+[eval] 560/1000 acc=0.755 last_r_toks=6 step_s=1.5 elapsed_s=724.9
+[eval] 570/1000 acc=0.756 last_r_toks=4 step_s=1.2 elapsed_s=737.4
+[eval] 580/1000 acc=0.755 last_r_toks=8 step_s=1.6 elapsed_s=750.3
+[eval] 590/1000 acc=0.758 last_r_toks=4 step_s=1.2 elapsed_s=763.3
+[eval] 600/1000 acc=0.753 last_r_toks=3 step_s=1.2 elapsed_s=776.4
+[eval] 610/1000 acc=0.752 last_r_toks=4 step_s=1.2 elapsed_s=789.6
+[eval] 620/1000 acc=0.753 last_r_toks=6 step_s=1.4 elapsed_s=803.0
+[eval] 630/1000 acc=0.757 last_r_toks=6 step_s=1.4 elapsed_s=815.6
+[eval] 640/1000 acc=0.756 last_r_toks=3 step_s=1.1 elapsed_s=828.6
+[eval] 650/1000 acc=0.755 last_r_toks=4 step_s=1.2 elapsed_s=841.5
+[eval] 660/1000 acc=0.752 last_r_toks=6 step_s=1.5 elapsed_s=855.3
+[eval] 670/1000 acc=0.749 last_r_toks=3 step_s=1.1 elapsed_s=868.7
+[eval] 680/1000 acc=0.750 last_r_toks=7 step_s=1.5 elapsed_s=881.7
+[eval] 690/1000 acc=0.749 last_r_toks=3 step_s=1.1 elapsed_s=894.4
+[eval] 700/1000 acc=0.749 last_r_toks=4 step_s=1.2 elapsed_s=907.7
+[eval] 710/1000 acc=0.749 last_r_toks=3 step_s=1.1 elapsed_s=919.9
+[eval] 720/1000 acc=0.750 last_r_toks=6 step_s=1.4 elapsed_s=933.0
+[eval] 730/1000 acc=0.751 last_r_toks=6 step_s=1.4 elapsed_s=946.3
+[eval] 740/1000 acc=0.749 last_r_toks=4 step_s=1.2 elapsed_s=958.7
+[eval] 750/1000 acc=0.749 last_r_toks=4 step_s=1.2 elapsed_s=971.0
+[eval] 760/1000 acc=0.750 last_r_toks=4 step_s=1.2 elapsed_s=983.8
+[eval] 770/1000 acc=0.752 last_r_toks=3 step_s=1.1 elapsed_s=996.5
+[eval] 780/1000 acc=0.751 last_r_toks=4 step_s=1.2 elapsed_s=1009.2
+[eval] 790/1000 acc=0.753 last_r_toks=7 step_s=1.5 elapsed_s=1022.1
+[eval] 800/1000 acc=0.752 last_r_toks=4 step_s=1.2 elapsed_s=1034.4
+[eval] 810/1000 acc=0.752 last_r_toks=4 step_s=1.2 elapsed_s=1047.7
+[eval] 820/1000 acc=0.752 last_r_toks=3 step_s=1.1 elapsed_s=1060.5
+[eval] 830/1000 acc=0.754 last_r_toks=3 step_s=1.1 elapsed_s=1073.2
+[eval] 840/1000 acc=0.754 last_r_toks=6 step_s=1.4 elapsed_s=1086.1
+[eval] 850/1000 acc=0.753 last_r_toks=4 step_s=1.2 elapsed_s=1099.5
+[eval] 860/1000 acc=0.752 last_r_toks=3 step_s=1.1 elapsed_s=1112.7
+[eval] 870/1000 acc=0.754 last_r_toks=6 step_s=1.4 elapsed_s=1126.3
+[eval] 880/1000 acc=0.752 last_r_toks=3 step_s=1.1 elapsed_s=1138.9
+[eval] 890/1000 acc=0.752 last_r_toks=3 step_s=1.1 elapsed_s=1151.0
+[eval] 900/1000 acc=0.753 last_r_toks=4 step_s=1.2 elapsed_s=1164.1
+[eval] 910/1000 acc=0.755 last_r_toks=4 step_s=1.2 elapsed_s=1176.8
+[eval] 920/1000 acc=0.753 last_r_toks=7 step_s=1.5 elapsed_s=1190.3
+[eval] 930/1000 acc=0.753 last_r_toks=3 step_s=1.1 elapsed_s=1203.6
+[eval] 940/1000 acc=0.753 last_r_toks=3 step_s=1.1 elapsed_s=1216.3
+[eval] 950/1000 acc=0.751 last_r_toks=3 step_s=1.1 elapsed_s=1228.5
+[eval] 960/1000 acc=0.751 last_r_toks=4 step_s=1.2 elapsed_s=1241.2
+[eval] 970/1000 acc=0.751 last_r_toks=6 step_s=1.4 elapsed_s=1253.4
+[eval] 980/1000 acc=0.751 last_r_toks=3 step_s=1.2 elapsed_s=1265.5
+[eval] 990/1000 acc=0.752 last_r_toks=7 step_s=1.5 elapsed_s=1279.1
+[eval] 1000/1000 acc=0.751 last_r_toks=6 step_s=1.4 elapsed_s=1292.1
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "thinking": true,
+  "n": 1000,
+  "accuracy": 0.751,
+  "malformed_rate": 0.0,
+  "mean_reasoning_tokens": 4.644,
+  "median_reasoning_tokens": 4,
+  "wall_clock_s": 1292.084688038,
+  "max_new_tokens": 256,
+  "seed": 42
+}
+[sealed] eval c3_grpo / test_ood
++ /usr/bin/python3 scripts/eval_model.py --config configs/baseline.yaml --model Qwen/Qwen3-1.7B --data /kaggle/working/data/test_ood/examples.jsonl --max-new-tokens 256 --device cuda:0 --load-in-4bit --thinking --output /kaggle/working/artifacts/reports/sealed/c3_grpo__test_ood.jsonl --adapter /kaggle/working/artifacts/checkpoints/c3_grpo --tokenizer-dir /kaggle/working/artifacts/checkpoints/tokenizer_codes
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<00:42,  7.30it/s]Loading weights:   1%|          | 2/311 [00:00<00:42,  7.32it/s]Loading weights:   5%|â         | 15/311 [00:00<00:05, 53.31it/s]Loading weights:  16%|ââ        | 49/311 [00:00<00:01, 151.69it/s]Loading weights:  27%|âââ       | 83/311 [00:00<00:01, 211.78it/s]Loading weights:  39%|ââââ      | 120/311 [00:00<00:00, 260.07it/s]Loading weights:  49%|âââââ     | 153/311 [00:00<00:00, 281.46it/s]Loading weights:  60%|ââââââ    | 188/311 [00:00<00:00, 302.28it/s]Loading weights:  71%|âââââââ   | 221/311 [00:00<00:00, 309.45it/s]Loading weights:  82%|âââââââââ | 254/311 [00:01<00:00, 315.17it/s]Loading weights:  93%|ââââââââââ| 290/311 [00:01<00:00, 322.92it/s]Loading weights: 100%|ââââââââââ| 311/311 [00:01<00:00, 248.76it/s]
+[eval] resize embeddings 151936 -> 151797
+[eval] loading adapter /kaggle/working/artifacts/checkpoints/c3_grpo
+[eval] start model=Qwen/Qwen3-1.7B thinking=True n=2000 max_new=256 4bit=True
+[eval] 10/2000 acc=0.700 last_r_toks=4 step_s=1.2 elapsed_s=13.6
+[eval] 20/2000 acc=0.700 last_r_toks=3 step_s=1.1 elapsed_s=26.8
+[eval] 30/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=40.2
+[eval] 40/2000 acc=0.550 last_r_toks=3 step_s=1.2 elapsed_s=53.0
+[eval] 50/2000 acc=0.520 last_r_toks=7 step_s=1.5 elapsed_s=66.7
+[eval] 60/2000 acc=0.550 last_r_toks=4 step_s=1.3 elapsed_s=79.6
+[eval] 70/2000 acc=0.586 last_r_toks=5 step_s=1.3 elapsed_s=93.6
+[eval] 80/2000 acc=0.562 last_r_toks=4 step_s=1.2 elapsed_s=105.7
+[eval] 90/2000 acc=0.533 last_r_toks=7 step_s=1.5 elapsed_s=118.5
+[eval] 100/2000 acc=0.550 last_r_toks=5 step_s=1.3 elapsed_s=131.9
+[eval] 110/2000 acc=0.545 last_r_toks=4 step_s=1.4 elapsed_s=145.3
+[eval] 120/2000 acc=0.583 last_r_toks=4 step_s=1.2 elapsed_s=158.5
+[eval] 130/2000 acc=0.585 last_r_toks=7 step_s=1.5 elapsed_s=172.7
+[eval] 140/2000 acc=0.579 last_r_toks=6 step_s=1.5 elapsed_s=185.9
+[eval] 150/2000 acc=0.580 last_r_toks=7 step_s=1.5 elapsed_s=199.4
+[eval] 160/2000 acc=0.581 last_r_toks=7 step_s=1.6 elapsed_s=213.0
+[eval] 170/2000 acc=0.588 last_r_toks=3 step_s=1.2 elapsed_s=224.8
+[eval] 180/2000 acc=0.594 last_r_toks=4 step_s=1.2 elapsed_s=238.3
+[eval] 190/2000 acc=0.600 last_r_toks=8 step_s=1.7 elapsed_s=251.5
+[eval] 200/2000 acc=0.600 last_r_toks=4 step_s=1.3 elapsed_s=264.6
+[eval] 210/2000 acc=0.595 last_r_toks=4 step_s=1.3 elapsed_s=277.0
+[eval] 220/2000 acc=0.586 last_r_toks=4 step_s=1.2 elapsed_s=290.0
+[eval] 230/2000 acc=0.587 last_r_toks=4 step_s=1.3 elapsed_s=302.6
+[eval] 240/2000 acc=0.588 last_r_toks=3 step_s=1.1 elapsed_s=316.3
+[eval] 250/2000 acc=0.588 last_r_toks=4 step_s=1.3 elapsed_s=328.6
+[eval] 260/2000 acc=0.577 last_r_toks=4 step_s=1.2 elapsed_s=341.1
+[eval] 270/2000 acc=0.585 last_r_toks=3 step_s=1.2 elapsed_s=354.0
+[eval] 280/2000 acc=0.586 last_r_toks=4 step_s=1.2 elapsed_s=366.2
+[eval] 290/2000 acc=0.579 last_r_toks=4 step_s=1.3 elapsed_s=378.9
+[eval] 300/2000 acc=0.580 last_r_toks=4 step_s=1.2 elapsed_s=391.3
+[eval] 310/2000 acc=0.584 last_r_toks=4 step_s=1.3 elapsed_s=404.3
+[eval] 320/2000 acc=0.578 last_r_toks=7 step_s=1.5 elapsed_s=418.1
+[eval] 330/2000 acc=0.579 last_r_toks=3 step_s=1.1 elapsed_s=430.7
+[eval] 340/2000 acc=0.579 last_r_toks=4 step_s=1.2 elapsed_s=443.6
+[eval] 350/2000 acc=0.577 last_r_toks=4 step_s=1.2 elapsed_s=455.9
+[eval] 360/2000 acc=0.581 last_r_toks=4 step_s=1.2 elapsed_s=468.0
+[eval] 370/2000 acc=0.584 last_r_toks=3 step_s=1.1 elapsed_s=481.0
+[eval] 380/2000 acc=0.589 last_r_toks=3 step_s=1.2 elapsed_s=494.5
+[eval] 390/2000 acc=0.590 last_r_toks=4 step_s=1.2 elapsed_s=507.1
+[eval] 400/2000 acc=0.588 last_r_toks=6 step_s=1.4 elapsed_s=520.4
+[eval] 410/2000 acc=0.593 last_r_toks=4 step_s=1.2 elapsed_s=533.4
+[eval] 420/2000 acc=0.588 last_r_toks=3 step_s=1.1 elapsed_s=546.3
+[eval] 430/2000 acc=0.593 last_r_toks=6 step_s=1.4 elapsed_s=558.6
+[eval] 440/2000 acc=0.589 last_r_toks=6 step_s=1.4 elapsed_s=571.8
+[eval] 450/2000 acc=0.591 last_r_toks=3 step_s=1.2 elapsed_s=584.6
+[eval] 460/2000 acc=0.589 last_r_toks=6 step_s=1.4 elapsed_s=597.4
+[eval] 470/2000 acc=0.585 last_r_toks=4 step_s=1.2 elapsed_s=610.2
+[eval] 480/2000 acc=0.583 last_r_toks=3 step_s=1.1 elapsed_s=622.2
+[eval] 490/2000 acc=0.588 last_r_toks=3 step_s=1.1 elapsed_s=635.7
+[eval] 500/2000 acc=0.588 last_r_toks=4 step_s=1.2 elapsed_s=648.7
+[eval] 510/2000 acc=0.578 last_r_toks=3 step_s=1.1 elapsed_s=660.9
+[eval] 520/2000 acc=0.579 last_r_toks=4 step_s=1.2 elapsed_s=673.3
+[eval] 530/2000 acc=0.577 last_r_toks=4 step_s=1.2 elapsed_s=686.4
+[eval] 540/2000 acc=0.578 last_r_toks=3 step_s=1.1 elapsed_s=698.9
+[eval] 550/2000 acc=0.575 last_r_toks=4 step_s=1.2 elapsed_s=710.8
+[eval] 560/2000 acc=0.570 last_r_toks=4 step_s=1.2 elapsed_s=724.0
+[eval] 570/2000 acc=0.574 last_r_toks=6 step_s=1.4 elapsed_s=736.8
+[eval] 580/2000 acc=0.572 last_r_toks=3 step_s=1.1 elapsed_s=749.9
+[eval] 590/2000 acc=0.573 last_r_toks=4 step_s=1.2 elapsed_s=762.2
+[eval] 600/2000 acc=0.573 last_r_toks=4 step_s=1.3 elapsed_s=775.0
+[eval] 610/2000 acc=0.574 last_r_toks=7 step_s=1.6 elapsed_s=787.6
+[eval] 620/2000 acc=0.571 last_r_toks=4 step_s=1.2 elapsed_s=799.4
+[eval] 630/2000 acc=0.568 last_r_toks=4 step_s=1.2 elapsed_s=811.7
+[eval] 640/2000 acc=0.567 last_r_toks=6 step_s=1.5 elapsed_s=824.8
+[eval] 650/2000 acc=0.565 last_r_toks=8 step_s=1.6 elapsed_s=837.3
+[eval] 660/2000 acc=0.564 last_r_toks=4 step_s=1.2 elapsed_s=849.7
+[eval] 670/2000 acc=0.563 last_r_toks=3 step_s=1.1 elapsed_s=862.9
+[eval] 680/2000 acc=0.563 last_r_toks=3 step_s=1.1 elapsed_s=875.8
+[eval] 690/2000 acc=0.561 last_r_toks=4 step_s=1.2 elapsed_s=888.1
+[eval] 700/2000 acc=0.561 last_r_toks=4 step_s=1.2 elapsed_s=901.1
+[eval] 710/2000 acc=0.561 last_r_toks=3 step_s=1.1 elapsed_s=913.4
+[eval] 720/2000 acc=0.558 last_r_toks=3 step_s=1.1 elapsed_s=926.1
+[eval] 730/2000 acc=0.562 last_r_toks=4 step_s=1.2 elapsed_s=939.2
+[eval] 740/2000 acc=0.559 last_r_toks=3 step_s=1.1 elapsed_s=951.6
+[eval] 750/2000 acc=0.563 last_r_toks=3 step_s=1.1 elapsed_s=964.3
+[eval] 760/2000 acc=0.561 last_r_toks=4 step_s=1.2 elapsed_s=976.9
+[eval] 770/2000 acc=0.561 last_r_toks=8 step_s=1.6 elapsed_s=990.3
+[eval] 780/2000 acc=0.564 last_r_toks=3 step_s=1.1 elapsed_s=1002.6
+[eval] 790/2000 acc=0.566 last_r_toks=4 step_s=1.2 elapsed_s=1015.0
+[eval] 800/2000 acc=0.564 last_r_toks=8 step_s=1.6 elapsed_s=1028.2
+[eval] 810/2000 acc=0.562 last_r_toks=3 step_s=1.1 elapsed_s=1041.0
+[eval] 820/2000 acc=0.560 last_r_toks=4 step_s=1.2 elapsed_s=1053.5
+[eval] 830/2000 acc=0.561 last_r_toks=7 step_s=1.5 elapsed_s=1066.9
+[eval] 840/2000 acc=0.562 last_r_toks=7 step_s=1.6 elapsed_s=1079.2
+[eval] 850/2000 acc=0.562 last_r_toks=4 step_s=1.2 elapsed_s=1092.2
+[eval] 860/2000 acc=0.560 last_r_toks=3 step_s=1.1 elapsed_s=1105.2
+[eval] 870/2000 acc=0.562 last_r_toks=3 step_s=1.1 elapsed_s=1117.5
+[eval] 880/2000 acc=0.562 last_r_toks=4 step_s=1.2 elapsed_s=1130.4
+[eval] 890/2000 acc=0.563 last_r_toks=6 step_s=1.4 elapsed_s=1142.8
+[eval] 900/2000 acc=0.566 last_r_toks=4 step_s=1.2 elapsed_s=1155.3
+[eval] 910/2000 acc=0.564 last_r_toks=4 step_s=1.2 elapsed_s=1167.5
+[eval] 920/2000 acc=0.565 last_r_toks=4 step_s=1.2 elapsed_s=1180.7
+[eval] 930/2000 acc=0.563 last_r_toks=3 step_s=1.1 elapsed_s=1192.7
+[eval] 940/2000 acc=0.562 last_r_toks=7 step_s=1.5 elapsed_s=1205.9
+[eval] 950/2000 acc=0.564 last_r_toks=4 step_s=1.2 elapsed_s=1218.8
+[eval] 960/2000 acc=0.565 last_r_toks=5 step_s=1.3 elapsed_s=1232.4
+[eval] 970/2000 acc=0.565 last_r_toks=3 step_s=1.1 elapsed_s=1244.9
+[eval] 980/2000 acc=0.565 last_r_toks=7 step_s=1.6 elapsed_s=1257.5
+[eval] 990/2000 acc=0.566 last_r_toks=6 step_s=1.4 elapsed_s=1270.1
+[eval] 1000/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=1282.5
+[eval] 1010/2000 acc=0.567 last_r_toks=3 step_s=1.1 elapsed_s=1294.5
+[eval] 1020/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=1308.2
+[eval] 1030/2000 acc=0.568 last_r_toks=3 step_s=1.1 elapsed_s=1320.4
+[eval] 1040/2000 acc=0.569 last_r_toks=7 step_s=1.5 elapsed_s=1332.7
+[eval] 1050/2000 acc=0.569 last_r_toks=4 step_s=1.2 elapsed_s=1345.9
+[eval] 1060/2000 acc=0.572 last_r_toks=6 step_s=1.4 elapsed_s=1358.5
+[eval] 1070/2000 acc=0.574 last_r_toks=4 step_s=1.2 elapsed_s=1370.4
+[eval] 1080/2000 acc=0.575 last_r_toks=7 step_s=1.5 elapsed_s=1383.3
+[eval] 1090/2000 acc=0.573 last_r_toks=6 step_s=1.4 elapsed_s=1397.1
+[eval] 1100/2000 acc=0.575 last_r_toks=3 step_s=1.1 elapsed_s=1409.5
+[eval] 1110/2000 acc=0.577 last_r_toks=3 step_s=1.1 elapsed_s=1422.8
+[eval] 1120/2000 acc=0.577 last_r_toks=4 step_s=1.2 elapsed_s=1435.4
+[eval] 1130/2000 acc=0.580 last_r_toks=4 step_s=1.2 elapsed_s=1448.5
+[eval] 1140/2000 acc=0.579 last_r_toks=4 step_s=1.2 elapsed_s=1461.5
+[eval] 1150/2000 acc=0.577 last_r_toks=4 step_s=1.3 elapsed_s=1474.6
+[eval] 1160/2000 acc=0.578 last_r_toks=3 step_s=1.1 elapsed_s=1486.7
+[eval] 1170/2000 acc=0.577 last_r_toks=3 step_s=1.2 elapsed_s=1499.0
+[eval] 1180/2000 acc=0.579 last_r_toks=3 step_s=1.1 elapsed_s=1511.6
+[eval] 1190/2000 acc=0.578 last_r_toks=4 step_s=1.3 elapsed_s=1524.8
+[eval] 1200/2000 acc=0.578 last_r_toks=3 step_s=1.1 elapsed_s=1537.7
+[eval] 1210/2000 acc=0.577 last_r_toks=3 step_s=1.1 elapsed_s=1550.3
+[eval] 1220/2000 acc=0.575 last_r_toks=3 step_s=1.1 elapsed_s=1562.3
+[eval] 1230/2000 acc=0.576 last_r_toks=4 step_s=1.2 elapsed_s=1575.4
+[eval] 1240/2000 acc=0.573 last_r_toks=4 step_s=1.2 elapsed_s=1588.2
+[eval] 1250/2000 acc=0.570 last_r_toks=5 step_s=1.3 elapsed_s=1601.0
+[eval] 1260/2000 acc=0.571 last_r_toks=8 step_s=1.7 elapsed_s=1614.9
+[eval] 1270/2000 acc=0.569 last_r_toks=4 step_s=1.2 elapsed_s=1627.9
+[eval] 1280/2000 acc=0.569 last_r_toks=6 step_s=1.4 elapsed_s=1641.7
+[eval] 1290/2000 acc=0.570 last_r_toks=3 step_s=1.2 elapsed_s=1654.0
+[eval] 1300/2000 acc=0.572 last_r_toks=4 step_s=1.2 elapsed_s=1666.4
+[eval] 1310/2000 acc=0.573 last_r_toks=6 step_s=1.4 elapsed_s=1680.2
+[eval] 1320/2000 acc=0.571 last_r_toks=4 step_s=1.2 elapsed_s=1692.8
+[eval] 1330/2000 acc=0.568 last_r_toks=4 step_s=1.2 elapsed_s=1706.1
+[eval] 1340/2000 acc=0.569 last_r_toks=3 step_s=1.1 elapsed_s=1718.6
+[eval] 1350/2000 acc=0.570 last_r_toks=6 step_s=1.4 elapsed_s=1731.7
+[eval] 1360/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=1745.0
+[eval] 1370/2000 acc=0.566 last_r_toks=6 step_s=1.4 elapsed_s=1758.1
+[eval] 1380/2000 acc=0.567 last_r_toks=3 step_s=1.1 elapsed_s=1770.7
+[eval] 1390/2000 acc=0.565 last_r_toks=3 step_s=1.1 elapsed_s=1783.4
+[eval] 1400/2000 acc=0.565 last_r_toks=6 step_s=1.4 elapsed_s=1796.6
+[eval] 1410/2000 acc=0.565 last_r_toks=4 step_s=1.2 elapsed_s=1808.9
+[eval] 1420/2000 acc=0.567 last_r_toks=3 step_s=1.1 elapsed_s=1821.8
+[eval] 1430/2000 acc=0.569 last_r_toks=8 step_s=1.7 elapsed_s=1834.3
+[eval] 1440/2000 acc=0.567 last_r_toks=3 step_s=1.1 elapsed_s=1846.7
+[eval] 1450/2000 acc=0.565 last_r_toks=3 step_s=1.1 elapsed_s=1859.3
+[eval] 1460/2000 acc=0.568 last_r_toks=7 step_s=1.5 elapsed_s=1872.7
+[eval] 1470/2000 acc=0.569 last_r_toks=3 step_s=1.1 elapsed_s=1884.5
+[eval] 1480/2000 acc=0.566 last_r_toks=3 step_s=1.1 elapsed_s=1897.3
+[eval] 1490/2000 acc=0.567 last_r_toks=6 step_s=1.4 elapsed_s=1910.4
+[eval] 1500/2000 acc=0.569 last_r_toks=6 step_s=1.4 elapsed_s=1922.8
+[eval] 1510/2000 acc=0.569 last_r_toks=4 step_s=1.2 elapsed_s=1935.9
+[eval] 1520/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=1948.0
+[eval] 1530/2000 acc=0.565 last_r_toks=4 step_s=1.2 elapsed_s=1960.9
+[eval] 1540/2000 acc=0.566 last_r_toks=3 step_s=1.1 elapsed_s=1973.4
+[eval] 1550/2000 acc=0.565 last_r_toks=3 step_s=1.1 elapsed_s=1986.3
+[eval] 1560/2000 acc=0.565 last_r_toks=3 step_s=1.2 elapsed_s=1999.1
+[eval] 1570/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=2011.9
+[eval] 1580/2000 acc=0.568 last_r_toks=3 step_s=1.2 elapsed_s=2024.6
+[eval] 1590/2000 acc=0.567 last_r_toks=3 step_s=1.1 elapsed_s=2036.0
+[eval] 1600/2000 acc=0.568 last_r_toks=3 step_s=1.1 elapsed_s=2048.7
+[eval] 1610/2000 acc=0.566 last_r_toks=4 step_s=1.2 elapsed_s=2061.1
+[eval] 1620/2000 acc=0.567 last_r_toks=5 step_s=1.4 elapsed_s=2073.7
+[eval] 1630/2000 acc=0.568 last_r_toks=3 step_s=1.1 elapsed_s=2086.5
+[eval] 1640/2000 acc=0.568 last_r_toks=3 step_s=1.1 elapsed_s=2099.3
+[eval] 1650/2000 acc=0.567 last_r_toks=3 step_s=1.1 elapsed_s=2112.0
+[eval] 1660/2000 acc=0.568 last_r_toks=6 step_s=1.5 elapsed_s=2125.0
+[eval] 1670/2000 acc=0.569 last_r_toks=4 step_s=1.2 elapsed_s=2137.2
+[eval] 1680/2000 acc=0.567 last_r_toks=4 step_s=1.2 elapsed_s=2150.6
+[eval] 1690/2000 acc=0.569 last_r_toks=3 step_s=1.2 elapsed_s=2164.0
+[eval] 1700/2000 acc=0.569 last_r_toks=4 step_s=1.2 elapsed_s=2176.8
+[eval] 1710/2000 acc=0.568 last_r_toks=4 step_s=1.3 elapsed_s=2191.3
+[eval] 1720/2000 acc=0.568 last_r_toks=3 step_s=1.1 elapsed_s=2205.4
+[eval] 1730/2000 acc=0.568 last_r_toks=7 step_s=1.5 elapsed_s=2218.0
+[eval] 1740/2000 acc=0.568 last_r_toks=4 step_s=1.2 elapsed_s=2231.0
+[eval] 1750/2000 acc=0.568 last_r_toks=4 step_s=1.3 elapsed_s=2244.2
+[eval] 1760/2000 acc=0.568 last_r_toks=4 step_s=1.2 elapsed_s=2257.1
+[eval] 1770/2000 acc=0.571 last_r_toks=3 step_s=1.1 elapsed_s=2269.2
+[eval] 1780/2000 acc=0.571 last_r_toks=3 step_s=1.1 elapsed_s=2282.3
+[eval] 1790/2000 acc=0.571 last_r_toks=3 step_s=1.1 elapsed_s=2296.4
+[eval] 1800/2000 acc=0.571 last_r_toks=5 step_s=1.3 elapsed_s=2309.5
+[eval] 1810/2000 acc=0.572 last_r_toks=4 step_s=1.2 elapsed_s=2321.6
+[eval] 1820/2000 acc=0.573 last_r_toks=4 step_s=1.2 elapsed_s=2335.5
+[eval] 1830/2000 acc=0.573 last_r_toks=4 step_s=1.3 elapsed_s=2349.0
+[eval] 1840/2000 acc=0.571 last_r_toks=6 step_s=1.4 elapsed_s=2362.8
+[eval] 1850/2000 acc=0.571 last_r_toks=4 step_s=1.3 elapsed_s=2375.0
+[eval] 1860/2000 acc=0.572 last_r_toks=3 step_s=1.2 elapsed_s=2387.6
+[eval] 1870/2000 acc=0.572 last_r_toks=3 step_s=1.1 elapsed_s=2400.2
+[eval] 1880/2000 acc=0.572 last_r_toks=4 step_s=1.3 elapsed_s=2413.7
+[eval] 1890/2000 acc=0.573 last_r_toks=3 step_s=1.1 elapsed_s=2425.8
+[eval] 1900/2000 acc=0.574 last_r_toks=3 step_s=1.1 elapsed_s=2437.9
+[eval] 1910/2000 acc=0.574 last_r_toks=4 step_s=1.2 elapsed_s=2451.4
+[eval] 1920/2000 acc=0.575 last_r_toks=4 step_s=1.3 elapsed_s=2464.3
+[eval] 1930/2000 acc=0.576 last_r_toks=4 step_s=1.2 elapsed_s=2477.8
+[eval] 1940/2000 acc=0.577 last_r_toks=4 step_s=1.2 elapsed_s=2490.7
+[eval] 1950/2000 acc=0.576 last_r_toks=3 step_s=1.1 elapsed_s=2502.9
+[eval] 1960/2000 acc=0.576 last_r_toks=4 step_s=1.2 elapsed_s=2515.6
+[eval] 1970/2000 acc=0.577 last_r_toks=7 step_s=1.5 elapsed_s=2529.2
+[eval] 1980/2000 acc=0.578 last_r_toks=4 step_s=1.2 elapsed_s=2542.4
+[eval] 1990/2000 acc=0.578 last_r_toks=3 step_s=1.2 elapsed_s=2555.2
+[eval] 2000/2000 acc=0.578 last_r_toks=4 step_s=1.2 elapsed_s=2568.5
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "thinking": true,
+  "n": 2000,
+  "accuracy": 0.578,
+  "malformed_rate": 0.0005,
+  "mean_reasoning_tokens": 4.491,
+  "median_reasoning_tokens": 4,
+  "wall_clock_s": 2568.478490245,
+  "max_new_tokens": 256,
+  "seed": 42
+}
+[sealed] eval c3_grpo / processbench
++ /usr/bin/python3 scripts/eval_model.py --config configs/baseline.yaml --model Qwen/Qwen3-1.7B --data /kaggle/working/data/processbench/examples.jsonl --max-new-tokens 256 --device cuda:0 --load-in-4bit --thinking --output /kaggle/working/artifacts/reports/sealed/c3_grpo__processbench.jsonl --adapter /kaggle/working/artifacts/checkpoints/c3_grpo --tokenizer-dir /kaggle/working/artifacts/checkpoints/tokenizer_codes
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<00:41,  7.42it/s]Loading weights:   1%|          | 2/311 [00:00<00:42,  7.32it/s]Loading weights:   5%|â         | 15/311 [00:00<00:05, 52.96it/s]Loading weights:  16%|ââ        | 49/311 [00:00<00:01, 149.48it/s]Loading weights:  27%|âââ       | 83/311 [00:00<00:01, 207.30it/s]Loading weights:  38%|ââââ      | 119/311 [00:00<00:00, 254.65it/s]Loading weights:  49%|âââââ     | 153/311 [00:00<00:00, 280.54it/s]Loading weights:  61%|ââââââ    | 189/311 [00:00<00:00, 303.42it/s]Loading weights:  72%|ââââââââ  | 224/311 [00:00<00:00, 313.01it/s]Loading weights:  83%|âââââââââ | 258/311 [00:01<00:00, 317.00it/s]Loading weights:  94%|ââââââââââ| 292/311 [00:01<00:00, 321.09it/s]Loading weights: 100%|ââââââââââ| 311/311 [00:01<00:00, 249.06it/s]
+[eval] resize embeddings 151936 -> 151797
+[eval] loading adapter /kaggle/working/artifacts/checkpoints/c3_grpo
+[eval] start model=Qwen/Qwen3-1.7B thinking=True n=3400 max_new=256 4bit=True
+[eval] 10/3400 acc=0.000 last_r_toks=3 step_s=1.2 elapsed_s=13.0
+[eval] 20/3400 acc=0.100 last_r_toks=6 step_s=1.5 elapsed_s=26.2
+[eval] 30/3400 acc=0.167 last_r_toks=4 step_s=1.2 elapsed_s=38.9
+[eval] 40/3400 acc=0.125 last_r_toks=3 step_s=1.2 elapsed_s=51.7
+[eval] 50/3400 acc=0.100 last_r_toks=7 step_s=2.2 elapsed_s=63.5
+[eval] 60/3400 acc=0.117 last_r_toks=7 step_s=1.5 elapsed_s=76.8
+[eval] 70/3400 acc=0.129 last_r_toks=3 step_s=1.2 elapsed_s=89.5
+[eval] 80/3400 acc=0.138 last_r_toks=3 step_s=1.2 elapsed_s=102.5
+[eval] 90/3400 acc=0.167 last_r_toks=1 step_s=1.2 elapsed_s=115.2
+[eval] 100/3400 acc=0.170 last_r_toks=5 step_s=1.4 elapsed_s=127.7
+[eval] 110/3400 acc=0.191 last_r_toks=4 step_s=1.3 elapsed_s=140.7
+[eval] 120/3400 acc=0.192 last_r_toks=3 step_s=1.2 elapsed_s=152.7
+[eval] 130/3400 acc=0.208 last_r_toks=4 step_s=1.2 elapsed_s=164.5
+[eval] 140/3400 acc=0.200 last_r_toks=4 step_s=1.3 elapsed_s=177.1
+[eval] 150/3400 acc=0.200 last_r_toks=3 step_s=1.2 elapsed_s=190.0
+[eval] 160/3400 acc=0.212 last_r_toks=4 step_s=1.2 elapsed_s=202.5
+[eval] 170/3400 acc=0.218 last_r_toks=3 step_s=1.2 elapsed_s=214.8
+[eval] 180/3400 acc=0.228 last_r_toks=1 step_s=1.0 elapsed_s=227.0
+[eval] 190/3400 acc=0.232 last_r_toks=5 step_s=1.4 elapsed_s=239.7
+[eval] 200/3400 acc=0.230 last_r_toks=3 step_s=1.1 elapsed_s=252.1
+[eval] 210/3400 acc=0.224 last_r_toks=4 step_s=1.3 elapsed_s=264.9
+[eval] 220/3400 acc=0.223 last_r_toks=1 step_s=0.4 elapsed_s=277.2
+[eval] 230/3400 acc=0.230 last_r_toks=1 step_s=0.4 elapsed_s=289.4
+[eval] 240/3400 acc=0.229 last_r_toks=3 step_s=1.1 elapsed_s=301.5
+[eval] 250/3400 acc=0.228 last_r_toks=3 step_s=1.2 elapsed_s=313.7
+[eval] 260/3400 acc=0.231 last_r_toks=3 step_s=1.1 elapsed_s=326.0
+[eval] 270/3400 acc=0.233 last_r_toks=3 step_s=1.1 elapsed_s=337.9
+[eval] 280/3400 acc=0.229 last_r_toks=4 step_s=1.2 elapsed_s=374.9
+[eval] 290/3400 acc=0.228 last_r_toks=3 step_s=1.2 elapsed_s=387.5
+[eval] 300/3400 acc=0.233 last_r_toks=3 step_s=1.2 elapsed_s=399.5
+[eval] 310/3400 acc=0.229 last_r_toks=3 step_s=1.2 elapsed_s=411.8
+[eval] 320/3400 acc=0.228 last_r_toks=4 step_s=1.2 elapsed_s=424.2
+[eval] 330/3400 acc=0.227 last_r_toks=3 step_s=1.1 elapsed_s=441.3
+[eval] 340/3400 acc=0.226 last_r_toks=1 step_s=0.9 elapsed_s=453.0
+[eval] 350/3400 acc=0.223 last_r_toks=3 step_s=1.2 elapsed_s=465.8
+[eval] 360/3400 acc=0.222 last_r_toks=3 step_s=1.1 elapsed_s=478.7
+[eval] 370/3400 acc=0.222 last_r_toks=4 step_s=1.2 elapsed_s=490.6
+[eval] 380/3400 acc=0.226 last_r_toks=4 step_s=1.3 elapsed_s=504.1
+[eval] 390/3400 acc=0.231 last_r_toks=4 step_s=1.3 elapsed_s=516.4
+[eval] 400/3400 acc=0.228 last_r_toks=3 step_s=1.3 elapsed_s=528.9
+[eval] 410/3400 acc=0.229 last_r_toks=3 step_s=1.9 elapsed_s=543.0
+[eval] 420/3400 acc=0.231 last_r_toks=1 step_s=0.9 elapsed_s=556.9
+[eval] 430/3400 acc=0.233 last_r_toks=6 step_s=1.7 elapsed_s=570.2
+[eval] 440/3400 acc=0.236 last_r_toks=4 step_s=1.2 elapsed_s=584.3
+[eval] 450/3400 acc=0.231 last_r_toks=5 step_s=1.5 elapsed_s=598.8
+[eval] 460/3400 acc=0.233 last_r_toks=3 step_s=1.5 elapsed_s=612.8
+[eval] 470/3400 acc=0.234 last_r_toks=4 step_s=1.4 elapsed_s=649.9
+[eval] 480/3400 acc=0.235 last_r_toks=1 step_s=1.3 elapsed_s=662.3
+[eval] 490/3400 acc=0.233 last_r_toks=1 step_s=1.7 elapsed_s=699.7
+[eval] 500/3400 acc=0.230 last_r_toks=3 step_s=1.5 elapsed_s=713.6
+[eval] 510/3400 acc=0.227 last_r_toks=6 step_s=1.4 elapsed_s=726.3
+[eval] 520/3400 acc=0.227 last_r_toks=4 step_s=1.5 elapsed_s=739.4
+[eval] 530/3400 acc=0.226 last_r_toks=3 step_s=1.6 elapsed_s=754.3
+[eval] 540/3400 acc=0.224 last_r_toks=4 step_s=1.7 elapsed_s=767.4
+[eval] 550/3400 acc=0.225 last_r_toks=5 step_s=1.5 elapsed_s=782.3
+[eval] 560/3400 acc=0.225 last_r_toks=3 step_s=1.4 elapsed_s=797.0
+[eval] 570/3400 acc=0.226 last_r_toks=1 step_s=0.9 elapsed_s=812.2
+[eval] 580/3400 acc=0.226 last_r_toks=3 step_s=1.5 elapsed_s=827.6
+[eval] 590/3400 acc=0.224 last_r_toks=3 step_s=1.7 elapsed_s=843.2
+[eval] 600/3400 acc=0.227 last_r_toks=1 step_s=0.6 elapsed_s=878.5
+[eval] 610/3400 acc=0.228 last_r_toks=3 step_s=1.4 elapsed_s=892.4
+[eval] 620/3400 acc=0.224 last_r_toks=189 step_s=18.9 elapsed_s=923.9
+[eval] 630/3400 acc=0.227 last_r_toks=1 step_s=1.2 elapsed_s=937.6
+[eval] 640/3400 acc=0.228 last_r_toks=3 step_s=1.1 elapsed_s=950.9
+[eval] 650/3400 acc=0.225 last_r_toks=3 step_s=1.6 elapsed_s=964.0
+[eval] 660/3400 acc=0.224 last_r_toks=1 step_s=1.0 elapsed_s=988.1
+[eval] 670/3400 acc=0.225 last_r_toks=5 step_s=1.5 elapsed_s=1002.8
+[eval] 680/3400 acc=0.226 last_r_toks=4 step_s=1.5 elapsed_s=1017.2
+[eval] 690/3400 acc=0.223 last_r_toks=5 step_s=1.4 elapsed_s=1056.1
+[eval] 700/3400 acc=0.221 last_r_toks=4 step_s=1.6 elapsed_s=1070.9
+[eval] 710/3400 acc=0.221 last_r_toks=3 step_s=1.4 elapsed_s=1108.6
+[eval] 720/3400 acc=0.218 last_r_toks=3 step_s=1.3 elapsed_s=1120.7
+[eval] 730/3400 acc=0.221 last_r_toks=1 step_s=1.6 elapsed_s=1135.8
+[eval] 740/3400 acc=0.223 last_r_toks=3 step_s=1.1 elapsed_s=1147.8
+[eval] 750/3400 acc=0.224 last_r_toks=4 step_s=1.3 elapsed_s=1159.9
+[eval] 760/3400 acc=0.225 last_r_toks=4 step_s=1.3 elapsed_s=1173.3
+[eval] 770/3400 acc=0.226 last_r_toks=5 step_s=1.4 elapsed_s=1186.6
+[eval] 780/3400 acc=0.227 last_r_toks=5 step_s=1.4 elapsed_s=1200.2
+[eval] 790/3400 acc=0.225 last_r_toks=3 step_s=1.2 elapsed_s=1240.5
+[eval] 800/3400 acc=0.228 last_r_toks=3 step_s=1.3 elapsed_s=1254.9
+[eval] 810/3400 acc=0.226 last_r_toks=3 step_s=1.3 elapsed_s=1276.0
+500 Server Error: Internal Server Error for url: https://api.kaggle.com/v1/kernels/logs/stream/zenitsu1agatsuma/reasonzipper-sealed-eval
+
+This is a problem on Kaggle's side, not with your command. Please try again later.
+500 Server Error: Internal Server Error for url: https://api.kaggle.com/v1/kernels/logs/stream/zenitsu1agatsuma/reasonzipper-sealed-eval
+
+This is a problem on Kaggle's side, not with your command. Please try again later.
++ git clone --depth 1 https://github.com/Priyanshu-5257/reasonzipper.git /kaggle/working/reasonzipper
+Cloning into '/kaggle/working/reasonzipper'...
++ /usr/bin/python3 -m pip install -q pyyaml pytest peft trl bitsandbytes accelerate datasets
++ /usr/bin/python3 scripts/check_environment.py --output /kaggle/working/artifacts/reports/sealed/environment.json
+{
+  "timestamp": "2026-10-28T08:37:28.565347+00:00",
+  "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+  "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+  "git_sha": "e572034e8b1feb457549ef1eec71577d9a9634bf",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.16.1",
+    "datasets": "4.8.5",
+    "peft": "0.20.0",
+    "trl": "1.16.0",
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.50.2",
+    "yaml": "6.0.3",
+    "numpy": "2.1.3"
+  },
+  "cuda_available": true,
+  "cuda_version": "12.8",
+  "gpu_count": 1,
+  "gpus": [
+    {
+      "index": 0,
+      "name": "Tesla T4",
+      "total_memory_gb": 14.56
+    }
+  ]
+}
+Wrote /kaggle/working/artifacts/reports/sealed/environment.json
++ /usr/bin/python3 -m pytest -q
+........................                                                 [100%]
+24 passed in 0.72s
+[sealed] scanning /kaggle/input ...
+  input: /kaggle/input/notebooks
+[sealed] c3=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c3_grpo c1=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c1_codes tok=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/tokenizer_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/tokenizer_codes -> /kaggle/working/artifacts/checkpoints/tokenizer_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c1_codes -> /kaggle/working/artifacts/checkpoints/c1_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c3_grpo -> /kaggle/working/artifacts/checkpoints/c3_grpo
+[sealed] generate synthetic data (seed from config; test never used for tuning)
++ /usr/bin/python3 scripts/generate_math_errors.py --config configs/baseline.yaml --output-dir /kaggle/working/data
+Wrote dataset to /kaggle/working/data
+{'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
++ /usr/bin/python3 scripts/validate_dataset.py --data-dir /kaggle/working/data
+counts: {'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
+id_templates: ['add_chain', 'div_chain', 'fraction_add', 'linear_eq', 'mul_chain', 'order_ops', 'percent_of', 'sub_chain', 'word_two_step']
+ood_templates: ['fraction_mul_sub', 'mixed_ops_linear', 'nested_order_ops', 'percent_then_eq', 'word_three_step']
+OK: all splits validated
+[sealed] prep ProcessBench
++ /usr/bin/python3 scripts/prep_processbench.py --output-dir /kaggle/working/data/processbench
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating gsm8k split:   0%|          | 0/400 [00:00<?, ? examples/s]Generating gsm8k split: 100%|ââââââââââ| 400/400 [00:00<00:00, 8078.09 examples/s]
+Generating math split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating math split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 33614.13 examples/s]
+Generating olympiadbench split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating olympiadbench split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 19512.57 examples/s]
+Generating omnimath split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating omnimath split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 23653.60 examples/s]
+[processbench] gsm8k: 400 -> /kaggle/working/data/processbench/gsm8k.jsonl
+[processbench] math: 1000 -> /kaggle/working/data/processbench/math.jsonl
+[processbench] olympiadbench: 1000 -> /kaggle/working/data/processbench/olympiadbench.jsonl
+[processbench] omnimath: 1000 -> /kaggle/working/data/processbench/omnimath.jsonl
+[processbench] wrote 3400 rows -> /kaggle/working/data/processbench/examples.jsonl
+[sealed] models=['c3'] splits=['processbench']
+[sealed] limits for c3_grpo: {'test_id': None, 'test_ood': None, 'processbench': None}
+[sealed] eval c3_grpo / processbench
++ /usr/bin/python3 scripts/eval_model.py --config configs/baseline.yaml --model Qwen/Qwen3-1.7B --data /kaggle/working/data/processbench/examples.jsonl --max-new-tokens 256 --device cuda:0 --load-in-4bit --thinking --output /kaggle/working/artifacts/reports/sealed/c3_grpo__processbench.jsonl --adapter /kaggle/working/artifacts/checkpoints/c3_grpo --tokenizer-dir /kaggle/working/artifacts/checkpoints/tokenizer_codes
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|âââââ     | 1/2 [00:02<00:02,  2.66s/it]Fetching 2 files: 100%|ââââââââââ| 2/2 [00:09<00:00,  4.87s/it]Fetching 2 files: 100%|ââââââââââ| 2/2 [00:09<00:00,  4.54s/it]
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<00:50,  6.14it/s]Loading weights:   1%|          | 2/311 [00:00<00:47,  6.53it/s]Loading weights:   1%|â         | 4/311 [00:00<00:42,  7.15it/s]Loading weights:  12%|ââ        | 37/311 [00:00<00:03, 84.80it/s]Loading weights:  23%|âââ       | 70/311 [00:00<00:01, 146.51it/s]Loading weights:  33%|ââââ      | 103/311 [00:00<00:01, 194.56it/s]Loading weights:  44%|âââââ     | 136/311 [00:00<00:00, 227.28it/s]Loading weights:  54%|ââââââ    | 169/311 [00:01<00:00, 252.63it/s]Loading weights:  65%|âââââââ   | 202/311 [00:01<00:00, 272.03it/s]Loading weights:  76%|ââââââââ  | 235/311 [00:01<00:00, 287.37it/s]Loading weights:  86%|âââââââââ | 268/311 [00:01<00:00, 298.37it/s]Loading weights:  97%|ââââââââââ| 301/311 [00:01<00:00, 304.74it/s]Loading weights: 100%|ââââââââââ| 311/311 [00:01<00:00, 203.31it/s]
+[eval] resize embeddings 151936 -> 151797
+[eval] loading adapter /kaggle/working/artifacts/checkpoints/c3_grpo
+[eval] start model=Qwen/Qwen3-1.7B thinking=True n=3400 max_new=256 4bit=True
+[eval] 10/3400 acc=0.000 last_r_toks=3 step_s=1.2 elapsed_s=13.8
+[eval] 20/3400 acc=0.100 last_r_toks=6 step_s=1.5 elapsed_s=26.9
+[eval] 30/3400 acc=0.167 last_r_toks=4 step_s=1.2 elapsed_s=39.6
+[eval] 40/3400 acc=0.125 last_r_toks=3 step_s=1.2 elapsed_s=52.4
+[eval] 50/3400 acc=0.100 last_r_toks=7 step_s=2.1 elapsed_s=64.0
+[eval] 60/3400 acc=0.117 last_r_toks=7 step_s=1.6 elapsed_s=77.2
+[eval] 70/3400 acc=0.129 last_r_toks=3 step_s=1.2 elapsed_s=90.0
+[eval] 80/3400 acc=0.138 last_r_toks=3 step_s=1.1 elapsed_s=102.9
+[eval] 90/3400 acc=0.167 last_r_toks=1 step_s=1.2 elapsed_s=115.7
+[eval] 100/3400 acc=0.170 last_r_toks=5 step_s=1.4 elapsed_s=128.2
+[eval] 110/3400 acc=0.191 last_r_toks=4 step_s=1.4 elapsed_s=141.2
+[eval] 120/3400 acc=0.192 last_r_toks=3 step_s=1.2 elapsed_s=153.3
+[eval] 130/3400 acc=0.208 last_r_toks=4 step_s=1.3 elapsed_s=165.3
+[eval] 140/3400 acc=0.200 last_r_toks=4 step_s=1.3 elapsed_s=178.1
+[eval] 150/3400 acc=0.200 last_r_toks=3 step_s=1.2 elapsed_s=191.0
+[eval] 160/3400 acc=0.212 last_r_toks=4 step_s=1.2 elapsed_s=203.4
+[eval] 170/3400 acc=0.218 last_r_toks=3 step_s=1.2 elapsed_s=215.8
+[eval] 180/3400 acc=0.228 last_r_toks=1 step_s=1.0 elapsed_s=228.1
+[eval] 190/3400 acc=0.232 last_r_toks=5 step_s=1.5 elapsed_s=240.9
+[eval] 200/3400 acc=0.230 last_r_toks=3 step_s=1.2 elapsed_s=253.4
+[eval] 210/3400 acc=0.224 last_r_toks=4 step_s=1.3 elapsed_s=266.3
+[eval] 220/3400 acc=0.223 last_r_toks=1 step_s=0.3 elapsed_s=278.8
+[eval] 230/3400 acc=0.230 last_r_toks=1 step_s=0.4 elapsed_s=291.1
+[eval] 240/3400 acc=0.229 last_r_toks=3 step_s=1.1 elapsed_s=303.3
+[eval] 250/3400 acc=0.228 last_r_toks=3 step_s=1.2 elapsed_s=315.6
+[eval] 260/3400 acc=0.231 last_r_toks=3 step_s=1.2 elapsed_s=328.2
+[eval] 270/3400 acc=0.233 last_r_toks=3 step_s=1.1 elapsed_s=340.1
+[eval] 280/3400 acc=0.229 last_r_toks=4 step_s=1.2 elapsed_s=377.8
+[eval] 290/3400 acc=0.228 last_r_toks=3 step_s=1.2 elapsed_s=390.6
+[eval] 300/3400 acc=0.233 last_r_toks=3 step_s=1.2 elapsed_s=402.8
+[eval] 310/3400 acc=0.229 last_r_toks=3 step_s=1.2 elapsed_s=415.3
+[eval] 320/3400 acc=0.228 last_r_toks=4 step_s=1.2 elapsed_s=427.9
+[eval] 330/3400 acc=0.227 last_r_toks=3 step_s=1.1 elapsed_s=445.0
+[eval] 340/3400 acc=0.226 last_r_toks=1 step_s=0.9 elapsed_s=456.9
+[eval] 350/3400 acc=0.223 last_r_toks=3 step_s=1.1 elapsed_s=469.9
+[eval] 360/3400 acc=0.222 last_r_toks=3 step_s=1.2 elapsed_s=483.1
+[eval] 370/3400 acc=0.222 last_r_toks=4 step_s=1.2 elapsed_s=495.2
+[eval] 380/3400 acc=0.226 last_r_toks=4 step_s=1.3 elapsed_s=508.9
+[eval] 390/3400 acc=0.231 last_r_toks=4 step_s=1.3 elapsed_s=521.5
+[eval] 400/3400 acc=0.228 last_r_toks=3 step_s=1.3 elapsed_s=534.1
+[eval] 410/3400 acc=0.229 last_r_toks=3 step_s=1.9 elapsed_s=548.4
+[eval] 420/3400 acc=0.231 last_r_toks=1 step_s=0.9 elapsed_s=562.4
+[eval] 430/3400 acc=0.233 last_r_toks=6 step_s=1.6 elapsed_s=575.7
+[eval] 440/3400 acc=0.236 last_r_toks=4 step_s=1.2 elapsed_s=589.7
+[eval] 450/3400 acc=0.231 last_r_toks=5 step_s=1.5 elapsed_s=604.1
+[eval] 460/3400 acc=0.233 last_r_toks=3 step_s=1.4 elapsed_s=618.0
+[eval] 470/3400 acc=0.234 last_r_toks=4 step_s=1.3 elapsed_s=655.8
+[eval] 480/3400 acc=0.235 last_r_toks=1 step_s=1.3 elapsed_s=668.2
+[eval] 490/3400 acc=0.233 last_r_toks=1 step_s=1.6 elapsed_s=706.1
+[eval] 500/3400 acc=0.230 last_r_toks=3 step_s=1.5 elapsed_s=719.8
+[eval] 510/3400 acc=0.227 last_r_toks=6 step_s=1.4 elapsed_s=732.6
+[eval] 520/3400 acc=0.227 last_r_toks=4 step_s=1.4 elapsed_s=745.6
+[eval] 530/3400 acc=0.226 last_r_toks=3 step_s=1.6 elapsed_s=760.3
+[eval] 540/3400 acc=0.224 last_r_toks=4 step_s=1.6 elapsed_s=773.3
+[eval] 550/3400 acc=0.225 last_r_toks=5 step_s=1.5 elapsed_s=788.3
+[eval] 560/3400 acc=0.225 last_r_toks=3 step_s=1.4 elapsed_s=803.0
+[eval] 570/3400 acc=0.226 last_r_toks=1 step_s=0.9 elapsed_s=818.3
+[eval] 580/3400 acc=0.226 last_r_toks=3 step_s=1.4 elapsed_s=833.5
+[eval] 590/3400 acc=0.224 last_r_toks=3 step_s=1.6 elapsed_s=848.8
+[eval] 600/3400 acc=0.227 last_r_toks=1 step_s=0.5 elapsed_s=884.6
+[eval] 610/3400 acc=0.228 last_r_toks=3 step_s=1.4 elapsed_s=898.6
+[eval] 620/3400 acc=0.224 last_r_toks=189 step_s=19.4 elapsed_s=930.7
+[eval] 630/3400 acc=0.227 last_r_toks=1 step_s=1.1 elapsed_s=944.1
+[eval] 640/3400 acc=0.228 last_r_toks=3 step_s=1.1 elapsed_s=957.6
+[eval] 650/3400 acc=0.225 last_r_toks=3 step_s=1.5 elapsed_s=970.8
+[eval] 660/3400 acc=0.224 last_r_toks=1 step_s=0.9 elapsed_s=994.6
+[eval] 670/3400 acc=0.225 last_r_toks=5 step_s=1.5 elapsed_s=1009.2
+[eval] 680/3400 acc=0.226 last_r_toks=4 step_s=1.5 elapsed_s=1023.4
+[eval] 690/3400 acc=0.223 last_r_toks=5 step_s=1.4 elapsed_s=1062.7
+[eval] 700/3400 acc=0.221 last_r_toks=4 step_s=1.6 elapsed_s=1077.6
+[eval] 710/3400 acc=0.221 last_r_toks=3 step_s=1.4 elapsed_s=1115.7
+[eval] 720/3400 acc=0.218 last_r_toks=3 step_s=1.3 elapsed_s=1127.8
+[eval] 730/3400 acc=0.221 last_r_toks=1 step_s=1.6 elapsed_s=1143.0
+[eval] 740/3400 acc=0.223 last_r_toks=3 step_s=1.1 elapsed_s=1155.0
+[eval] 750/3400 acc=0.224 last_r_toks=4 step_s=1.2 elapsed_s=1167.3
+[eval] 760/3400 acc=0.225 last_r_toks=4 step_s=1.3 elapsed_s=1180.7
+[eval] 770/3400 acc=0.226 last_r_toks=5 step_s=1.4 elapsed_s=1194.0
+[eval] 780/3400 acc=0.227 last_r_toks=5 step_s=1.3 elapsed_s=1207.5
+[eval] 790/3400 acc=0.225 last_r_toks=3 step_s=1.2 elapsed_s=1248.2
+[eval] 800/3400 acc=0.228 last_r_toks=3 step_s=1.3 elapsed_s=1262.7
+[eval] 810/3400 acc=0.226 last_r_toks=3 step_s=1.3 elapsed_s=1283.8
+[eval] 820/3400 acc=0.226 last_r_toks=3 step_s=1.5 elapsed_s=1298.7
+[eval] 830/3400 acc=0.227 last_r_toks=3 step_s=1.2 elapsed_s=1311.6
+[eval] 840/3400 acc=0.227 last_r_toks=3 step_s=1.5 elapsed_s=1324.3
+[eval] 850/3400 acc=0.227 last_r_toks=5 step_s=1.4 elapsed_s=1337.8
+[eval] 860/3400 acc=0.226 last_r_toks=3 step_s=1.8 elapsed_s=1353.1
+[eval] 870/3400 acc=0.225 last_r_toks=4 step_s=1.6 elapsed_s=1368.0
+[eval] 880/3400 acc=0.223 last_r_toks=3 step_s=1.6 elapsed_s=1381.7
+[eval] 890/3400 acc=0.221 last_r_toks=7 step_s=1.6 elapsed_s=1396.4
+[eval] 900/3400 acc=0.223 last_r_toks=4 step_s=1.5 elapsed_s=1409.2
+[eval] 910/3400 acc=0.222 last_r_toks=1 step_s=0.3 elapsed_s=1421.2
+[eval] 920/3400 acc=0.222 last_r_toks=3 step_s=1.2 elapsed_s=1433.8
+[eval] 930/3400 acc=0.222 last_r_toks=3 step_s=1.2 elapsed_s=1447.6
+[eval] 940/3400 acc=0.221 last_r_toks=6 step_s=1.6 elapsed_s=1461.2
+[eval] 950/3400 acc=0.221 last_r_toks=3 step_s=1.3 elapsed_s=1473.8
+[eval] 960/3400 acc=0.221 last_r_toks=5 step_s=1.4 elapsed_s=1511.0
+[eval] 970/3400 acc=0.225 last_r_toks=6 step_s=1.5 elapsed_s=1523.3
+[eval] 980/3400 acc=0.222 last_r_toks=3 step_s=1.6 elapsed_s=1537.3
+[eval] 990/3400 acc=0.221 last_r_toks=6 step_s=1.4 elapsed_s=1551.1
+[eval] 1000/3400 acc=0.220 last_r_toks=5 step_s=1.4 elapsed_s=1563.7
+[eval] 1010/3400 acc=0.220 last_r_toks=4 step_s=1.3 elapsed_s=1577.4
+[eval] 1020/3400 acc=0.219 last_r_toks=1 step_s=1.4 elapsed_s=1590.5
+[eval] 1030/3400 acc=0.217 last_r_toks=5 step_s=1.3 elapsed_s=1604.4
+[eval] 1040/3400 acc=0.216 last_r_toks=3 step_s=1.2 elapsed_s=1642.9
+[eval] 1050/3400 acc=0.217 last_r_toks=4 step_s=1.3 elapsed_s=1655.9
+[eval] 1060/3400 acc=0.216 last_r_toks=5 step_s=1.6 elapsed_s=1670.1
+[eval] 1070/3400 acc=0.215 last_r_toks=4 step_s=1.3 elapsed_s=1682.8
+[eval] 1080/3400 acc=0.217 last_r_toks=5 step_s=1.7 elapsed_s=1696.9
+[eval] 1090/3400 acc=0.217 last_r_toks=3 step_s=1.2 elapsed_s=1711.5
+[eval] 1100/3400 acc=0.219 last_r_toks=4 step_s=1.3 elapsed_s=1724.6
+[eval] 1110/3400 acc=0.218 last_r_toks=4 step_s=1.3 elapsed_s=1762.0
+[eval] 1120/3400 acc=0.217 last_r_toks=4 step_s=1.3 elapsed_s=1774.5
+[eval] 1130/3400 acc=0.215 last_r_toks=5 step_s=1.6 elapsed_s=1788.4
+[eval] 1140/3400 acc=0.213 last_r_toks=1 step_s=1.3 elapsed_s=1802.5
+[eval] 1150/3400 acc=0.215 last_r_toks=5 step_s=1.5 elapsed_s=1816.1
+[eval] 1160/3400 acc=0.216 last_r_toks=44 step_s=4.7 elapsed_s=1832.7
+[eval] 1170/3400 acc=0.215 last_r_toks=7 step_s=1.7 elapsed_s=1846.0
+[eval] 1180/3400 acc=0.215 last_r_toks=6 step_s=1.5 elapsed_s=1882.7
+[eval] 1190/3400 acc=0.215 last_r_toks=4 step_s=1.4 elapsed_s=1897.5
+[eval] 1200/3400 acc=0.215 last_r_toks=1 step_s=0.4 elapsed_s=1909.5
+[eval] 1210/3400 acc=0.214 last_r_toks=3 step_s=1.4 elapsed_s=1923.0
+[eval] 1220/3400 acc=0.216 last_r_toks=6 step_s=1.6 elapsed_s=1936.6
+[eval] 1230/3400 acc=0.215 last_r_toks=3 step_s=2.4 elapsed_s=1950.1
+[eval] 1240/3400 acc=0.214 last_r_toks=3 step_s=1.2 elapsed_s=1988.7
+[eval] 1250/3400 acc=0.213 last_r_toks=6 step_s=1.6 elapsed_s=2003.5
+[eval] 1260/3400 acc=0.213 last_r_toks=5 step_s=1.4 elapsed_s=2017.2
+[eval] 1270/3400 acc=0.211 last_r_toks=5 step_s=1.4 elapsed_s=2029.1
+[eval] 1280/3400 acc=0.210 last_r_toks=4 step_s=1.4 elapsed_s=2054.4
+[eval] 1290/3400 acc=0.209 last_r_toks=4 step_s=1.3 elapsed_s=2069.0
+[eval] 1300/3400 acc=0.208 last_r_toks=5 step_s=1.4 elapsed_s=2081.2
+[eval] 1310/3400 acc=0.208 last_r_toks=3 step_s=1.2 elapsed_s=2095.1
+[eval] 1320/3400 acc=0.208 last_r_toks=5 step_s=1.4 elapsed_s=2109.5
+[eval] 1330/3400 acc=0.208 last_r_toks=6 step_s=1.5 elapsed_s=2148.4
+[eval] 1340/3400 acc=0.207 last_r_toks=5 step_s=1.4 elapsed_s=2161.2
+[eval] 1350/3400 acc=0.207 last_r_toks=4 step_s=1.3 elapsed_s=2174.8
+[eval] 1360/3400 acc=0.208 last_r_toks=1 step_s=1.0 elapsed_s=2189.5
+[eval] 1370/3400 acc=0.207 last_r_toks=4 step_s=1.3 elapsed_s=2203.0
+[eval] 1380/3400 acc=0.207 last_r_toks=3 step_s=1.2 elapsed_s=2216.5
+[eval] 1390/3400 acc=0.206 last_r_toks=3 step_s=1.2 elapsed_s=2230.2
+[eval] 1400/3400 acc=0.205 last_r_toks=5 step_s=1.6 elapsed_s=2243.8
+[eval] 1410/3400 acc=0.204 last_r_toks=4 step_s=1.4 elapsed_s=2282.9
+[eval] 1420/3400 acc=0.204 last_r_toks=3 step_s=1.3 elapsed_s=2297.9
+[eval] 1430/3400 acc=0.203 last_r_toks=3 step_s=1.4 elapsed_s=2312.9
+[eval] 1440/3400 acc=0.201 last_r_toks=3 step_s=1.2 elapsed_s=2328.3
+[eval] 1450/3400 acc=0.201 last_r_toks=4 step_s=1.4 elapsed_s=2342.6
+[eval] 1460/3400 acc=0.200 last_r_toks=255 step_s=26.3 elapsed_s=2395.4
+[eval] 1470/3400 acc=0.200 last_r_toks=1 step_s=1.2 elapsed_s=2409.2
+[eval] 1480/3400 acc=0.199 last_r_toks=5 step_s=2.0 elapsed_s=2450.6
+[eval] 1490/3400 acc=0.198 last_r_toks=4 step_s=1.6 elapsed_s=2466.2
+[eval] 1500/3400 acc=0.197 last_r_toks=5 step_s=1.6 elapsed_s=2481.3
+[eval] 1510/3400 acc=0.196 last_r_toks=3 step_s=1.5 elapsed_s=2497.6
+[eval] 1520/3400 acc=0.195 last_r_toks=1 step_s=1.2 elapsed_s=2513.6
+[eval] 1530/3400 acc=0.193 last_r_toks=4 step_s=0.8 elapsed_s=2527.8
+[eval] 1540/3400 acc=0.192 last_r_toks=5 step_s=2.2 elapsed_s=2569.1
+[eval] 1550/3400 acc=0.191 last_r_toks=3 step_s=1.3 elapsed_s=2584.4
+[eval] 1560/3400 acc=0.191 last_r_toks=5 step_s=1.8 elapsed_s=2599.3
+[eval] 1570/3400 acc=0.191 last_r_toks=4 step_s=1.4 elapsed_s=2614.0
+[eval] 1580/3400 acc=0.191 last_r_toks=1 step_s=1.5 elapsed_s=2654.2
+[eval] 1590/3400 acc=0.189 last_r_toks=1 step_s=1.5 elapsed_s=2669.3
+[eval] 1600/3400 acc=0.190 last_r_toks=3 step_s=1.5 elapsed_s=2684.5
+[eval] 1610/3400 acc=0.189 last_r_toks=3 step_s=1.8 elapsed_s=2699.9
+[eval] 1620/3400 acc=0.188 last_r_toks=4 step_s=1.4 elapsed_s=2714.1
+[eval] 1630/3400 acc=0.187 last_r_toks=4 step_s=1.7 elapsed_s=2727.9
+[eval] 1640/3400 acc=0.187 last_r_toks=6 step_s=1.8 elapsed_s=2743.2
+[eval] 1650/3400 acc=0.185 last_r_toks=1 step_s=1.6 elapsed_s=2760.8

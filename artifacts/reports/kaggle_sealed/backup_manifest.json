@@ -1,0 +1,42 @@
+{
+  "source": "Captured locally via `kaggle kernels logs -f` before kernel delete",
+  "kernel": "zenitsu1agatsuma/reasonzipper-sealed-eval",
+  "kernel_version": 2,
+  "note": "Kaggle session delete removes remote logs/outputs for that run. These files are the local backup.",
+  "completed": {
+    "c3_grpo__test_id": {
+      "model": "Qwen/Qwen3-1.7B",
+      "thinking": true,
+      "n": 1000,
+      "accuracy": 0.751,
+      "malformed_rate": 0.0,
+      "mean_reasoning_tokens": 4.644,
+      "median_reasoning_tokens": 4,
+      "wall_clock_s": 1292.084688038,
+      "max_new_tokens": 256,
+      "seed": 42
+    },
+    "c3_grpo__test_ood": {
+      "model": "Qwen/Qwen3-1.7B",
+      "thinking": true,
+      "n": 2000,
+      "accuracy": 0.578,
+      "malformed_rate": 0.0005,
+      "mean_reasoning_tokens": 4.491,
+      "median_reasoning_tokens": 4,
+      "wall_clock_s": 2568.478490245,
+      "max_new_tokens": 256,
+      "seed": 42
+    }
+  },
+  "incomplete_at_cancel": {
+    "split": "c3_grpo / processbench",
+    "last_progress_line": "[eval] 1650/3400 acc=0.185 last_r_toks=1 step_s=1.6 elapsed_s=2760.8"
+  },
+  "files": [
+    "sealed_eval_v2_live.log",
+    "c3_grpo__test_id.summary.json",
+    "c3_grpo__test_ood.summary.json",
+    "README.md"
+  ]
+}

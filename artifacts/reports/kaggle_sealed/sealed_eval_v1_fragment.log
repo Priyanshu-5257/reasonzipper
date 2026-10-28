@@ -1,0 +1,72 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.3), please consider upgrading to the latest version (2.2.5)
++ git clone --depth 1 https://github.com/Priyanshu-5257/reasonzipper.git /kaggle/working/reasonzipper
+Cloning into '/kaggle/working/reasonzipper'...
++ /usr/bin/python3 -m pip install -q pyyaml pytest peft trl bitsandbytes accelerate datasets
++ /usr/bin/python3 scripts/check_environment.py --output /kaggle/working/artifacts/reports/sealed/environment.json
+{
+  "timestamp": "2026-10-28T06:53:04.823779+00:00",
+  "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+  "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+  "git_sha": "e3f40849cbac90eabdcbfa2172e06a6c032f6344",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.16.1",
+    "datasets": "4.8.5",
+    "peft": "0.20.0",
+    "trl": "1.16.0",
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.50.2",
+    "yaml": "6.0.3",
+    "numpy": "2.1.3"
+  },
+  "cuda_available": true,
+  "cuda_version": "12.8",
+  "gpu_count": 1,
+  "gpus": [
+    {
+      "index": 0,
+      "name": "Tesla T4",
+      "total_memory_gb": 14.56
+    }
+  ]
+}
+Wrote /kaggle/working/artifacts/reports/sealed/environment.json
++ /usr/bin/python3 -m pytest -q
+........................                                                 [100%]
+24 passed in 0.72s
+[sealed] scanning /kaggle/input ...
+  input: /kaggle/input/notebooks
+[sealed] c3=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c3_grpo c1=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c1_codes tok=/kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/tokenizer_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/tokenizer_codes -> /kaggle/working/artifacts/checkpoints/tokenizer_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c1_codes -> /kaggle/working/artifacts/checkpoints/c1_codes
+[sealed] copied /kaggle/input/notebooks/zenitsu1agatsuma/reasonzipper-stage-c-resume/artifacts/checkpoints/c3_grpo -> /kaggle/working/artifacts/checkpoints/c3_grpo
+[sealed] generate synthetic data (seed from config; test never used for tuning)
++ /usr/bin/python3 scripts/generate_math_errors.py --config configs/baseline.yaml --output-dir /kaggle/working/data
+Wrote dataset to /kaggle/working/data
+{'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
++ /usr/bin/python3 scripts/validate_dataset.py --data-dir /kaggle/working/data
+counts: {'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
+id_templates: ['add_chain', 'div_chain', 'fraction_add', 'linear_eq', 'mul_chain', 'order_ops', 'percent_of', 'sub_chain', 'word_two_step']
+ood_templates: ['fraction_mul_sub', 'mixed_ops_linear', 'nested_order_ops', 'percent_then_eq', 'word_three_step']
+OK: all splits validated
+[sealed] prep ProcessBench
++ /usr/bin/python3 scripts/prep_processbench.py --output-dir /kaggle/working/data/processbench
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating gsm8k split:   0%|          | 0/400 [00:00<?, ? examples/s]Generating gsm8k split: 100%|ââââââââââ| 400/400 [00:00<00:00, 9421.64 examples/s]
+Generating math split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating math split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 32177.99 examples/s]
+Generating olympiadbench split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating olympiadbench split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 27176.97 examples/s]
+Generating omnimath split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating omnimath split: 100%|ââââââââââ| 1000/1000 [00:00<00:00, 29206.82 examples/s]
+[processbench] gsm8k: 400 -> /kaggle/working/data/processbench/gsm8k.jsonl
+[processbench] math: 1000 -> /kaggle/working/data/processbench/math.jsonl
+[processbench] olympiadbench: 1000 -> /kaggle/working/data/processbench/olympiadbench.jsonl
+[processbench] omnimath: 1000 -> /kaggle/working/data/processbench/omnimath.jsonl
+[processbench] wrote 3400 rows -> /kaggle/working/data/processbench/examples.jsonl
+[sealed] eval a0_thinking / test_id
++ /usr/bin/python3 scripts/eval_model.py --config configs/baseline.yaml --model Qwen/Qwen3-1.7B --data /kaggle/working/data/test_id/examples.jsonl --max-new-tokens 256 --device cuda:0 --load-in-4bit --thinking --output /kaggle/working/artifacts/reports/sealed/a0_thinking__test_id.jsonl
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|âââââ     | 1/2 [00:04<00:04,  4.16s/it]Fetching 2 files: 100%|ââââââââââ| 2/2 [00:08<00:00,  4.06s/it]Fetching 2 files: 100%|ââââââââââ| 2/2 [00:08<00:00,  4.08s/it]
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<00:49,  6.26it/s]Loading weights:   1%|          | 2/311 [00:00<00:45,  6.75it/s]Loading weights:   1%|â         | 4/311 [00:00<00:43,  7.06it/s]Loading weights:  12%|ââ        | 37/311 [00:00<00:03, 84.53it/s]Loading weights:  23%|âââ       | 70/311 [00:00<00:01, 146.76it/s]Loading weights:  33%|ââââ      | 103/311 [00:00<00:01, 194.55it/s]Loading weights:  44%|âââââ     | 137/311 [00:00<00:00, 230.11it/s]Loading weights:  55%|ââââââ    | 171/311 [00:01<00:00, 255.44it/s]Loading weights:  66%|âââââââ   | 204/311 [00:01<00:00, 275.36it/s]Loading weights:  76%|ââââââââ  | 237/311 [00:01<00:00, 290.62it/s]Loading weights:  87%|âââââââââ | 270/311 [00:01<00:00, 299.40it/s]Loading weights:  98%|ââââââââââ| 304/311 [00:01<00:00, 311.13it/s]Loading weights: 100%|ââââââââââ| 311/311 [00:01<00:00, 206.12it/s]
+[eval] resize embeddings 151936 -> 151669
+[eval] start model=Qwen/Qwen3-1.7B thinking=True n=1000 max_new=256 4bit=True
+[eval] 10/1000 acc=0.400 last_r_toks=1 step_s=11.5 elapsed_s=130.8
+[eval] 20/1000 acc=0.450 last_r_toks=1 step_s=13.6 elapsed_s=252.0
