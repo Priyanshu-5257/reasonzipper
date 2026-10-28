@@ -19,7 +19,9 @@ from reasonzipper.metrics import extract_reasoning_span, score_prediction
 from reasonzipper.reward import correctness_first_rewards
 from reasonzipper.t4_train import (
     cast_trainable_away_from_bf16,
+    disable_trl_fused_lm_head,
     force_t4_fp16_env,
+    patch_trainable_tokens_lm_head,
     t4_training_precision_kwargs,
 )
 
@@ -121,6 +123,7 @@ def main() -> None:
     base = prepare_model_for_kbit_training(base, use_gradient_checkpointing=True)
     model = PeftModel.from_pretrained(base, str(args.sft_adapter), is_trainable=True)
     cast_trainable_away_from_bf16(model)
+    patch_trainable_tokens_lm_head(model)
     model.config.use_cache = False
 
     def reward_fn(completions, first_error_line, **kwargs):
@@ -212,6 +215,9 @@ def main() -> None:
         trainer_kwargs.pop("processing_class", None)
         trainer_kwargs["tokenizer"] = tokenizer
         trainer = GRPOTrainer(**trainer_kwargs)
+
+    disable_trl_fused_lm_head(trainer)
+    patch_trainable_tokens_lm_head(trainer.model)
 
     print("[grpo] training...", flush=True)
     trainer.train()

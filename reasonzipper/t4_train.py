@@ -71,3 +71,53 @@ def t4_training_precision_kwargs() -> dict:
         "bf16": False,
         "tf32": False,
     }
+
+
+def patch_trainable_tokens_lm_head(model: Any) -> int:
+    """
+    PEFT TrainableTokensWrapper has no `.bias`, but TRL fused LM-head CE reads
+    `lm_head.bias` and crashes. Attach bias=None so fused/non-fused paths work.
+    """
+    n = 0
+    for name, module in model.named_modules():
+        cls = module.__class__.__name__
+        if cls in {"TrainableTokensWrapper", "ModulesToSaveWrapper"}:
+            if not hasattr(module, "bias"):
+                try:
+                    object.__setattr__(module, "bias", None)
+                except Exception:
+                    module.bias = None  # type: ignore[attr-defined]
+                n += 1
+                print(f"[t4] patched {name} ({cls}).bias = None", flush=True)
+    return n
+
+
+def disable_trl_fused_lm_head(trainer: Any) -> None:
+    """Prefer HF Trainer.compute_loss; clear fused-head flags when present."""
+    from transformers.trainer import Trainer as HfTrainer
+
+    def _compute_loss(model, inputs, return_outputs=False, num_items_in_batch=None):
+        return HfTrainer.compute_loss(
+            trainer,
+            model,
+            inputs,
+            return_outputs=return_outputs,
+            num_items_in_batch=num_items_in_batch,
+        )
+
+    trainer.compute_loss = _compute_loss
+    for attr in ("use_fused_lm_head", "fused_linear_cross_entropy"):
+        if hasattr(trainer, attr):
+            setattr(trainer, attr, False)
+    if hasattr(trainer, "args"):
+        for attr in ("use_liger_kernel", "use_liger"):
+            if hasattr(trainer.args, attr):
+                try:
+                    setattr(trainer.args, attr, False)
+                except Exception:
+                    pass
+    # Patch model wrappers that TRL fused CE may touch
+    model = getattr(trainer, "model", None)
+    if model is not None:
+        patch_trainable_tokens_lm_head(model)
+    print("[t4] disabled TRL fused LM-head path", flush=True)

@@ -1,0 +1,16 @@
+{
+  "id": "zenitsu1agatsuma/reasonzipper-stage-c-resume",
+  "title": "reasonzipper-stage-c-resume",
+  "code_file": "stage_c_runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": ["zenitsu1agatsuma/reasonzipper-stage-c"],
+  "model_sources": []
+}

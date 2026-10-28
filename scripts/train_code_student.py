@@ -16,7 +16,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from reasonzipper.t4_train import (
+    disable_trl_fused_lm_head,
     force_t4_fp16_env,
+    patch_trainable_tokens_lm_head,
     prepare_qlora_for_t4,
     t4_training_precision_kwargs,
 )
@@ -169,23 +171,8 @@ def main() -> None:
     except TypeError:
         trainer = SFTTrainer(tokenizer=tokenizer, **trainer_kwargs)
 
-    # TRL fused LM-head CE crashes with PEFT TrainableTokensWrapper (no .bias).
-    # Fall back to Transformers Trainer.compute_loss.
-    from transformers.trainer import Trainer as HfTrainer
-
-    def _compute_loss(model, inputs, return_outputs=False, num_items_in_batch=None):
-        return HfTrainer.compute_loss(
-            trainer,
-            model,
-            inputs,
-            return_outputs=return_outputs,
-            num_items_in_batch=num_items_in_batch,
-        )
-
-    trainer.compute_loss = _compute_loss  # type: ignore[method-assign]
-    if hasattr(trainer, "use_fused_lm_head"):
-        trainer.use_fused_lm_head = False
-    print("[code-sft] disabled TRL fused_lm_head for trainable tokens", flush=True)
+    disable_trl_fused_lm_head(trainer)
+    patch_trainable_tokens_lm_head(trainer.model)
 
     print("[code-sft] training...", flush=True)
     trainer.train()
