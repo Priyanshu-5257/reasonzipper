@@ -1,0 +1,29 @@
+{
+  "summaries": {
+    "a0_thinking": {
+      "test_ood": {
+        "n": 50,
+        "accuracy": 0.32,
+        "mean_reasoning_tokens": 104.64,
+        "median_reasoning_tokens": 1,
+        "malformed_rate": 0.52
+      }
+    }
+  },
+  "comparisons": {
+    "c3_vs_a0_test_id": {
+      "acc_delta": null,
+      "reasoning_token_reduction": null
+    },
+    "c3_vs_a0_test_ood": {
+      "acc_delta": null,
+      "reasoning_token_reduction": null
+    }
+  },
+  "poc_checks": {
+    "id_acc_drop_le_2pp": false,
+    "id_tok_reduction_ge_30pct": false,
+    "ood_acc_drop_le_3pp": false,
+    "sealed_poc_pass": false
+  }
+}

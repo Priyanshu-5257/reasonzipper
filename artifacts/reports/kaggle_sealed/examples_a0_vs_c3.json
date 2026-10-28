@@ -1,0 +1,69 @@
+[
+  {
+    "model": "c3_grpo",
+    "split": "processbench",
+    "id": "processbench_gsm8k_gsm8k-13",
+    "gold": 2,
+    "parsed": 2,
+    "correct": true,
+    "reasoning_tokens": 4,
+    "think_span": "<|r058|><|r077|>",
+    "answer": "ERROR_LINE=2"
+  },
+  {
+    "model": "c3_grpo",
+    "split": "processbench",
+    "id": "processbench_gsm8k_gsm8k-19",
+    "gold": 1,
+    "parsed": 1,
+    "correct": true,
+    "reasoning_tokens": 6,
+    "think_span": "<|r012|><|r017|><|r039|><|r119|>",
+    "answer": "ERROR_LINE=1"
+  },
+  {
+    "model": "c3_grpo",
+    "split": "processbench",
+    "id": "processbench_gsm8k_gsm8k-0",
+    "gold": 2,
+    "parsed": 1,
+    "correct": false,
+    "reasoning_tokens": 3,
+    "think_span": "<|r062|>",
+    "answer": "ERROR_LINE=1"
+  },
+  {
+    "model": "a0_thinking",
+    "split": "test_ood",
+    "id": "test_ood_nested_order_ops_00451",
+    "gold": 1,
+    "parsed": 3,
+    "correct": false,
+    "reasoning_tokens": 168,
+    "think_span": "\nOkay, let's see. The student solved the problem 4 + (2 + 5) × 3. Let me check each step.\n\nFirst, according to order of operations, parentheses come first. So they did 2 + 5, which is 7. Then they multiplied 7 by 3, getting 21. Then added 4 + 21, which is 25? Wait, the student said 4 + 21 = 51. That's wrong. Because 4 + 21 is 25, not 51. So the mistake is in step 3 where they added 4 + 21. That's the error. The line number for step 3 is line 3. So the answer should be ERROR_LINE=3.\n",
+    "answer": "ERROR_LINE=3"
+  },
+  {
+    "model": "a0_thinking",
+    "split": "test_ood",
+    "id": "test_ood_fraction_mul_sub_00228",
+    "gold": "NONE",
+    "parsed": "NONE",
+    "correct": true,
+    "reasoning_tokens": 1,
+    "think_span": "(empty)",
+    "answer": "</think>\n\nThe student's solution is as follows:\n\n1. Multiply: (2/4)×(4/3) = 2/3  \n2. Subtract: 2/3 - 1 = -1/3  \n3. Final answer: -1/3  \n\nLet's check the correctness of each step.\n\n### Step 1: Multiplication  \n$$\n\\frac{2}{4} \\times \\frac{4}{3} = \\frac{2 \\times 4}{4 \\times 3} = \\frac{8}{12} = \\frac{2}{3}\n$$  \nThis step is **correct**.\n\n### Step 2: Subtraction  \n$$\n\\frac{2}{3} - 1 = \\frac{2}{3} - \\frac{3}{3} = -\\frac{1}{3}\n$$  \nThis step is **correct**.\n\n### Step 3: Final answer  \n$$\n-\\frac{1}{3}\n$",
+    "note": "Qwen often closes <think> empty then continues English outside the span; our r-tok counter only counts inside <think>."
+  },
+  {
+    "model": "a0_thinking",
+    "split": "processbench",
+    "id": "processbench_gsm8k_gsm8k-356",
+    "gold": "NONE",
+    "parsed": "NONE",
+    "correct": true,
+    "reasoning_tokens": 1,
+    "think_span": "(empty)",
+    "answer": "</think>\n\nThe student's solution is fully correct, and there is no error in the lines provided.\n\n**Reasoning:**\n- The total distance is 200 yards.\n- Half the distance is on land (100 yards) and half in water (100 yards).\n- Time on land: $ \\frac{100}{20} = 5 $ minutes.\n- Time in water: $ \\frac{100}{10} = 10 $ minutes.\n- Total time: $ 5 + 10 = 15 $ minutes.\n\nAll steps are logically and mathematicall"
+  }
+]

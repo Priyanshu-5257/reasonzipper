@@ -1,14 +1,16 @@
-# Sealed-eval local backup
+# Sealed eval backups & findings
 
-Kaggle **deletes remote run logs/outputs** when a kernel/session is deleted.
-This folder is the local backup captured with `kaggle kernels logs -f` before cancel.
+Kaggle deletes remote logs/outputs when a session is deleted — keep local copies here.
 
-## Completed (C3 GRPO)
-- `test_id` (n=1000): see `c3_grpo__test_id.summary.json`
-- `test_ood` (n=2000): see `c3_grpo__test_ood.summary.json`
+## Headline numbers
+See `sealed_findings_summary.json` and `docs/experiment.md` (Sealed eval section).
 
-## Raw stream
-- `sealed_eval_v2_live.log`
+## Reasoning examples
+`examples_a0_vs_c3.json` — curated A0 English vs C3 `<|rXXX|>` generations.
 
-## Incomplete at cancel
-- C3 × ProcessBench was mid-run (see `backup_manifest.json`).
+## C3 sealed ID/OOD (from earlier run)
+- `c3_grpo__test_id.summary.json`
+- `c3_grpo__test_ood.summary.json`
+- `partial_from_logs.json`
+
+A0 probe artifacts (OOD-50 / PB-50) live in `../kaggle_sealed_a0/`.

@@ -94,6 +94,79 @@ Artifacts: `artifacts/reports/kaggle_stage_c/gate_c.json`
 
 ---
 
+## Sealed eval (held-out ID / OOD / ProcessBench)
+
+Kernels:
+- C3: [reasonzipper-sealed-eval](https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-sealed-eval)
+- A0 OOD-50: [reasonzipper-sealed-a0-ood50](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-sealed-a0-ood50)
+- A0 PB-50: [reasonzipper-sealed-a0-pb50](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-sealed-a0-pb50)
+
+**Scoring:** parse `ERROR_LINE=<N|NONE>` after `</think>`; malformed / missing close ⇒ incorrect; accuracy = exact match vs gold. ProcessBench gold = 0-based `label` → 1-based (`-1` → `NONE`).
+
+### Synthetic sealed sets
+
+| Model | Split | n | Acc | Mean r-toks | Notes |
+|---|---|---:|---:|---:|---|
+| **C3** | test_id | 1000 | **75.1%** | **4.64** | full sealed |
+| **C3** | test_ood | 2000 | **57.8%** | **4.49** | full sealed |
+| A0 | test_id | 440/1000 | ~48.2% (running) | — | cancelled mid-run (quota) |
+| A0 | test_ood | 50 (seed=42) | 32% | 104.6 (median 1) | 52% malformed |
+
+### ProcessBench
+
+| Model | n | Acc | Mean r-toks | Malformed |
+|---|---:|---:|---:|---:|
+| **C3** | 3400 (full) | **14.5%** | 7.50 | 5.2% |
+| A0 | 50 (seed=42) | 8% | 6.08 (median 1) | 72% |
+
+Both struggle on ProcessBench vs synthetic ID/OOD (OOD from training). C3 still edges A0 on the PB probe and stays short/code-shaped.
+
+### Reasoning examples (A0 English vs C3 codes)
+
+**C3 — correct (ProcessBench):**
+```text
+<think>
+<|r058|><|r077|>
+</think>
+ERROR_LINE=2          # gold=2
+```
+
+**C3 — correct:**
+```text
+<think>
+<|r012|><|r017|><|r039|><|r119|>
+</think>
+ERROR_LINE=1          # gold=1
+```
+
+**C3 — wrong line (valid parse):**
+```text
+<think>
+<|r062|>
+</think>
+ERROR_LINE=1          # gold=2
+```
+
+**A0 — English inside `<think>` (sealed OOD):**
+```text
+<think>
+Okay, let's see. The student solved the problem 4 + (2 + 5) × 3. ...
+... 4 + 21 is 25, not 51. So the mistake is in step 3 ...
+</think>
+ERROR_LINE=3          # gold=1 (wrong)
+```
+
+**A0 quirk:** Qwen often emits an **empty** `<think></think>` then continues long English *outside* the span. Our `reasoning_tokens` counter only counts **inside** `<think>`, so A0 median is often **1** even when the visible English CoT is long (mean can still be high when the think span fills).
+
+Curated rows: `artifacts/reports/kaggle_sealed/examples_a0_vs_c3.json`  
+Numbers: `artifacts/reports/kaggle_sealed/sealed_findings_summary.json`
+
+### Takeaway
+
+On in-distribution sealed **test_id**, C3 looks strongly ahead of A0 (~75% vs ~48% partial) at ~**10×** fewer reasoning tokens than Stage-A A0 (~49). OOD-50 and ProcessBench-50 probes are noisy/small but point the same way: codes stay short; vanilla thinking is longer and often malformed on these prompts.
+
+---
+
 ## Training / loss summary
 
 | Stage | Objective |
@@ -108,7 +181,8 @@ Artifacts: `artifacts/reports/kaggle_stage_c/gate_c.json`
 ## Next actions
 
 1. Optional: stronger codebook (learned VQ / checkpoint aux heads) to close the gap to B2 accuracy.
-2. Sealed ID/OOD/ProcessBench eval on the C3 candidate.
+2. Optional: score C3 on the same A0 OOD/PB seed-42 subsets (n=50) for matched head-to-head.
+3. Optional: fix A0 think-span accounting / prompting so English CoT stays inside `<think>`.
 
 ---
 

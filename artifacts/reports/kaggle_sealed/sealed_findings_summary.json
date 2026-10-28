@@ -1,0 +1,48 @@
+{
+  "sealed_synthetic": {
+    "c3_test_id": {
+      "n": 1000,
+      "accuracy": 0.751,
+      "mean_reasoning_tokens": 4.644
+    },
+    "c3_test_ood": {
+      "n": 2000,
+      "accuracy": 0.578,
+      "mean_reasoning_tokens": 4.491
+    },
+    "a0_test_id_partial": {
+      "n_seen": 440,
+      "running_accuracy": 0.482,
+      "note": "cancelled mid-run"
+    },
+    "a0_test_ood_sample50": {
+      "n": 50,
+      "seed": 42,
+      "accuracy": 0.32,
+      "mean_reasoning_tokens": 104.64,
+      "median_reasoning_tokens": 1,
+      "malformed_rate": 0.52
+    }
+  },
+  "processbench": {
+    "c3_full": {
+      "n": 3400,
+      "accuracy": 0.1453,
+      "mean_reasoning_tokens": 7.496,
+      "malformed_rate": 0.052
+    },
+    "a0_sample50": {
+      "n": 50,
+      "seed": 42,
+      "accuracy": 0.08,
+      "mean_reasoning_tokens": 6.08,
+      "median_reasoning_tokens": 1,
+      "malformed_rate": 0.72
+    }
+  },
+  "kernels": {
+    "c3_sealed": "https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-sealed-eval",
+    "a0_ood50": "https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-sealed-a0-ood50",
+    "a0_pb50": "https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-sealed-a0-pb50"
+  }
+}

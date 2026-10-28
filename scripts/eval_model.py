@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 import time
 from pathlib import Path
@@ -44,7 +45,19 @@ def main() -> None:
     p.add_argument("--config", type=Path, default=ROOT / "configs/baseline.yaml")
     p.add_argument("--model", type=str, default=None)
     p.add_argument("--data", type=Path, required=True, help="JSONL split path")
-    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--limit", type=int, default=None, help="Take first N rows (after optional sample)")
+    p.add_argument(
+        "--sample",
+        type=int,
+        default=None,
+        help="Randomly sample N rows with --seed (for quick sealed comparisons)",
+    )
+    p.add_argument(
+        "--log-reasoning-every",
+        type=int,
+        default=10,
+        help="Print full generation (incl. think span) every N examples; 0 disables",
+    )
     p.add_argument("--thinking", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--seed", type=int, default=None)
@@ -110,6 +123,14 @@ def main() -> None:
     model.eval()
 
     rows = load_jsonl(args.data)
+    if args.sample is not None:
+        if args.sample < len(rows):
+            rng = random.Random(seed)
+            rows = rng.sample(rows, args.sample)
+        # if sample >= len(rows), keep all (still shuffled for fairness)
+        else:
+            rng = random.Random(seed)
+            rng.shuffle(rows)
     if args.limit:
         rows = rows[: args.limit]
 
@@ -121,7 +142,8 @@ def main() -> None:
     log_every = max(1, min(10, len(rows) // 10 or 1))
     print(
         f"[eval] start model={model_name} thinking={args.thinking} "
-        f"n={len(rows)} max_new={max_new} 4bit={args.load_in_4bit}",
+        f"n={len(rows)} max_new={max_new} 4bit={args.load_in_4bit} "
+        f"sample={args.sample} seed={seed}",
         flush=True,
     )
     for i, row in enumerate(rows, start=1):
@@ -164,6 +186,18 @@ def main() -> None:
                 f"last_r_toks={tok_stats['reasoning_tokens']} "
                 f"step_s={time.perf_counter() - step_t0:.1f} "
                 f"elapsed_s={time.perf_counter() - t0:.1f}",
+                flush=True,
+            )
+        if args.log_reasoning_every and i % args.log_reasoning_every == 0:
+            # Truncate huge dumps so Kaggle logs stay readable
+            dump = text_for_parse
+            if len(dump) > 2000:
+                dump = dump[:2000] + "\n...[truncated]..."
+            print(
+                f"[eval][reasoning] i={i} id={row.get('id')} "
+                f"gold={row.get('first_error_line')} "
+                f"correct={scored['correct']} r_toks={tok_stats['reasoning_tokens']}\n"
+                f"{dump}\n[eval][reasoning_end]",
                 flush=True,
             )
 

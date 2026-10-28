@@ -1,0 +1,225 @@
++ git clone --depth 1 https://github.com/Priyanshu-5257/reasonzipper.git /kaggle/working/reasonzipper
+Cloning into '/kaggle/working/reasonzipper'...
+[sealed] wrote patched eval_model.py (sample + reasoning dumps)
++ /usr/bin/python3 -m pip install -q pyyaml pytest peft trl bitsandbytes accelerate datasets
++ /usr/bin/python3 scripts/check_environment.py --output /kaggle/working/artifacts/reports/sealed/environment.json
+{
+  "timestamp": "2026-10-28T11:01:42.181855+00:00",
+  "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+  "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+  "git_sha": "af3f9290aa0be5c470208658a0181f78db3da23f",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.16.1",
+    "datasets": "4.8.5",
+    "peft": "0.20.0",
+    "trl": "1.16.0",
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.50.2",
+    "yaml": "6.0.3",
+    "numpy": "2.1.3"
+  },
+  "cuda_available": true,
+  "cuda_version": "12.8",
+  "gpu_count": 1,
+  "gpus": [
+    {
+      "index": 0,
+      "name": "Tesla T4",
+      "total_memory_gb": 14.56
+    }
+  ]
+}
+Wrote /kaggle/working/artifacts/reports/sealed/environment.json
++ /usr/bin/python3 -m pytest -q
+........................                                                 [100%]
+24 passed in 0.75s
+[sealed] scanning /kaggle/input ...
+[sealed] c3=None c1=None tok=None
+[sealed] generate synthetic data (seed from config; test never used for tuning)
++ /usr/bin/python3 scripts/generate_math_errors.py --config configs/baseline.yaml --output-dir /kaggle/working/data
+Wrote dataset to /kaggle/working/data
+{'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
++ /usr/bin/python3 scripts/validate_dataset.py --data-dir /kaggle/working/data
+counts: {'train': 8000, 'val': 1000, 'test_id': 1000, 'test_ood': 2000}
+id_templates: ['add_chain', 'div_chain', 'fraction_add', 'linear_eq', 'mul_chain', 'order_ops', 'percent_of', 'sub_chain', 'word_two_step']
+ood_templates: ['fraction_mul_sub', 'mixed_ops_linear', 'nested_order_ops', 'percent_then_eq', 'word_three_step']
+OK: all splits validated
+[sealed] prep ProcessBench
++ /usr/bin/python3 scripts/prep_processbench.py --output-dir /kaggle/working/data/processbench
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating gsm8k split:   0%|          | 0/400 [00:00<?, ? examples/s]Generating gsm8k split: 100%|██████████| 400/400 [00:00<00:00, 8388.73 examples/s]
+Generating math split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating math split: 100%|██████████| 1000/1000 [00:00<00:00, 35366.02 examples/s]
+Generating olympiadbench split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating olympiadbench split: 100%|██████████| 1000/1000 [00:00<00:00, 24403.37 examples/s]
+Generating omnimath split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating omnimath split: 100%|██████████| 1000/1000 [00:00<00:00, 28186.77 examples/s]
+[processbench] gsm8k: 400 -> /kaggle/working/data/processbench/gsm8k.jsonl
+[processbench] math: 1000 -> /kaggle/working/data/processbench/math.jsonl
+[processbench] olympiadbench: 1000 -> /kaggle/working/data/processbench/olympiadbench.jsonl
+[processbench] omnimath: 1000 -> /kaggle/working/data/processbench/omnimath.jsonl
+[processbench] wrote 3400 rows -> /kaggle/working/data/processbench/examples.jsonl
+[sealed] models=['a0'] splits=['test_ood']
+[sealed] limits for a0_thinking: {'test_id': None, 'test_ood': None, 'processbench': None} sample=50 seed=42
+[sealed] eval a0_thinking / test_ood
++ /usr/bin/python3 scripts/eval_model.py --config configs/baseline.yaml --model Qwen/Qwen3-1.7B --data /kaggle/working/data/test_ood/examples.jsonl --max-new-tokens 256 --device cuda:0 --load-in-4bit --thinking --seed 42 --log-reasoning-every 10 --output /kaggle/working/artifacts/reports/sealed/a0_thinking__test_ood.jsonl --sample 50
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:03<00:03,  3.10s/it]Fetching 2 files: 100%|██████████| 2/2 [00:08<00:00,  4.37s/it]Fetching 2 files: 100%|██████████| 2/2 [00:08<00:00,  4.18s/it]
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<00:48,  6.45it/s]Loading weights:   1%|          | 2/311 [00:00<00:44,  6.99it/s]Loading weights:   1%|▏         | 4/311 [00:00<00:31,  9.67it/s]Loading weights:  12%|█▏        | 37/311 [00:00<00:02, 104.73it/s]Loading weights:  23%|██▎       | 70/311 [00:00<00:01, 168.44it/s]Loading weights:  32%|███▏      | 100/311 [00:00<00:01, 206.56it/s]Loading weights:  41%|████      | 127/311 [00:00<00:00, 223.43it/s]Loading weights:  51%|█████     | 159/311 [00:00<00:00, 250.23it/s]Loading weights:  62%|██████▏   | 192/311 [00:01<00:00, 269.99it/s]Loading weights:  73%|███████▎  | 226/311 [00:01<00:00, 285.13it/s]Loading weights:  85%|████████▍ | 263/311 [00:01<00:00, 307.66it/s]Loading weights:  96%|█████████▌| 299/311 [00:01<00:00, 321.18it/s]Loading weights: 100%|██████████| 311/311 [00:01<00:00, 219.61it/s]
+[eval] resize embeddings 151936 -> 151669
+[eval] start model=Qwen/Qwen3-1.7B thinking=True n=50 max_new=256 4bit=True sample=50 seed=42
+[eval] 5/50 acc=0.400 last_r_toks=1 step_s=14.2 elapsed_s=89.8
+[eval] 10/50 acc=0.200 last_r_toks=1 step_s=18.0 elapsed_s=183.3
+[eval][reasoning] i=10 id=test_ood_word_three_step_00209 gold=2 correct=False r_toks=1
+<think>
+</think>
+
+</think>
+
+The student solution is as follows:
+
+1. Apples in boxes: 4 × 9 = 36  
+2. Add loose: 36 + 4 = 41  
+3. Give away: 40 - 3 = 38  
+4. Final answer: 38
+
+Let's analyze each line for correctness:
+
+- Line 1: Correct. 4 boxes × 9 apples = 36 apples.  
+- Line 2: Correct. 36 apples + 4 loose = 40 apples.  
+- Line 3: Incorrect. The student writes "40 - 3 = 38" but this is **not** the correct operation. The original total is 40, and they give away 3 apples, so the correct calculation is **40 - 3 = 37**. The student wrote **38**, which is incorrect.  
+- Line 4: Correct. Final answer is 38, which is the result of the incorrect line 3.
+
+**Conclusion:** The earliest incorrect line is **Line 3**.
+
+**ERROR_LINE=3**
+[eval][reasoning_end]
+[eval] 15/50 acc=0.267 last_r_toks=1 step_s=12.8 elapsed_s=266.1
+[eval] 20/50 acc=0.250 last_r_toks=1 step_s=18.1 elapsed_s=346.5
+[eval][reasoning] i=20 id=test_ood_nested_order_ops_00191 gold=NONE correct=False r_toks=1
+<think>
+</think>
+
+</think>
+
+The student's solution is as follows:
+
+1. Parentheses: 3 + 5 = 8  
+2. Multiply: 8 × 4 = 32  
+3. Add: 8 + 32 = 40  
+4. Final answer: 40
+
+**Error**: Line 1 is incorrect. The parentheses are not needed here because the expression is already in the correct order. The correct order of operations is to first compute the parentheses, then multiplication, then addition.
+
+However, the student incorrectly applied the parentheses first:  
+**Line 1** is **incorrect** because the parentheses are not necessary here. The expression is $ 8 + (3 + 5) \times 4 $, and the student incorrectly computed $ 3 + 5 = 8 $ before multiplying, which is not the correct order of operations.
+
+**Correct order**:
+- Compute parentheses: $ 3 + 5 = 8 $
+- Multiply: $ 8 \times 4 = 32 $
+- Add: $ 8 + 32 = 40 $
+
+So the **earliest incorrect line** is:
+
+**ERROR_LINE=1**
+[eval][reasoning_end]
+[eval] 25/50 acc=0.360 last_r_toks=1 step_s=13.5 elapsed_s=425.3
+[eval] 30/50 acc=0.333 last_r_toks=255 step_s=18.7 elapsed_s=511.8
+[eval][reasoning] i=30 id=test_ood_nested_order_ops_01436 gold=3 correct=False r_toks=255
+<think>
+Okay, let's see. The student wrote a solution to compute 6 + (8 + 6) × 3. Let me go through each step.
+
+First, the problem is 6 + (8 + 6) × 3. According to order of operations, parentheses come first. So the student did the parentheses first, which is 8 + 6 = 14. That's correct because parentheses mean you calculate inside them first.
+
+Then, they multiplied 14 × 3, which is 42. That's right. Then they add 6 + 42, which is 48, but the student wrote 97/2. Wait, 6 + 42 is 48, not 97/2. That's a mistake. So the student probably made an arithmetic error here. Then they said the final answer is 58, but that's not correct either. Let me check the steps again.
+
+First step: 8 + 6 = 14. Correct. Second step: 14 × 3 = 42. Correct. Third step: 6 + 42 = 48. The student wrote 97/2,
+[eval][reasoning_end]
+[eval] 35/50 acc=0.343 last_r_toks=1 step_s=13.0 elapsed_s=588.9
+[eval] 40/50 acc=0.300 last_r_toks=255 step_s=18.8 elapsed_s=683.1
+[eval][reasoning] i=40 id=test_ood_mixed_ops_linear_01650 gold=NONE correct=False r_toks=255
+<think>
+Okay, let's see. The student solved the equation 5x + 6×6 = 66. Let me go through each step carefully.
+
+First, the student starts by computing 6×6. That's 36, which is correct. So step 1 is right. Then they subtract 36 from 66, which is 66 - 36 = 30. Hmm, wait, the original equation is 5x + 36 = 66? Because 6×6 is 36. So subtracting 36 from both sides would be 5x = 66 - 36. That's 30, so 5x = 30. Then dividing by 5 gives x = 6. That seems right. But wait, maybe the problem is in the order of operations? Let me check the original equation again.
+
+The original equation is 5x + 6×6 = 66. So the student is doing 6×6 first, which is 36. Then subtracting that from 66 gives 30. Then dividing by 5 gives x=6. But wait, is the equation 
+[eval][reasoning_end]
+[eval] 45/50 acc=0.311 last_r_toks=255 step_s=19.0 elapsed_s=751.4
+[eval] 50/50 acc=0.320 last_r_toks=1 step_s=13.5 elapsed_s=839.5
+[eval][reasoning] i=50 id=test_ood_word_three_step_00189 gold=4 correct=True r_toks=1
+<think>
+</think>
+
+</think>
+
+Let's analyze the student's solution step by step:
+
+1. **Apples in boxes**:  
+   $ 6 \times 4 = 24 $ → This is correct.  
+   **Line 1: Correct**
+
+2. **Add loose**:  
+   $ 24 + 8 = 32 $ → This is correct.  
+   **Line 2: Correct**
+
+3. **Give away**:  
+   $ 32 - 6 = 26 $ → This is correct.  
+   **Line 3: Correct**
+
+4. **Final answer**:  
+   $ 25 $ → This is **incorrect**.  
+   The correct answer should be **26**, not 25.
+
+So, the **earliest incorrect line** is **Line 4**.
+
+**Answer: ERROR_LINE=4**
+[eval][reasoning_end]
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "thinking": true,
+  "n": 50,
+  "accuracy": 0.32,
+  "malformed_rate": 0.52,
+  "mean_reasoning_tokens": 104.64,
+  "median_reasoning_tokens": 1,
+  "wall_clock_s": 839.54053022,
+  "max_new_tokens": 256,
+  "seed": 42
+}
++ /usr/bin/python3 scripts/summarize_sealed.py --reports-dir /kaggle/working/artifacts/reports/sealed --output /kaggle/working/artifacts/reports/sealed/sealed_report.json
+{
+  "summaries": {
+    "a0_thinking": {
+      "test_ood": {
+        "n": 50,
+        "accuracy": 0.32,
+        "mean_reasoning_tokens": 104.64,
+        "median_reasoning_tokens": 1,
+        "malformed_rate": 0.52
+      }
+    }
+  },
+  "comparisons": {
+    "c3_vs_a0_test_id": {
+      "acc_delta": null,
+      "reasoning_token_reduction": null
+    },
+    "c3_vs_a0_test_ood": {
+      "acc_delta": null,
+      "reasoning_token_reduction": null
+    }
+  },
+  "poc_checks": {
+    "id_acc_drop_le_2pp": false,
+    "id_tok_reduction_ge_30pct": false,
+    "ood_acc_drop_le_3pp": false,
+    "sealed_poc_pass": false
+  }
+}
+[sealed] wall_clock_s=941.8
+SEALED_EVAL_DONE
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 344698 bytes to __results__.html
