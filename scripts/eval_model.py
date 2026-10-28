@@ -52,6 +52,12 @@ def main() -> None:
     p.add_argument("--device", type=str, default="cuda:0")
     p.add_argument("--load-in-4bit", action="store_true", help="NF4 load for T4 memory headroom")
     p.add_argument("--adapter", type=str, default=None, help="Optional PEFT adapter directory")
+    p.add_argument(
+        "--tokenizer-dir",
+        type=str,
+        default=None,
+        help="Optional tokenizer dir (required for Stage C extended vocab)",
+    )
     args = p.parse_args()
 
     with args.config.open() as f:
@@ -71,7 +77,8 @@ def main() -> None:
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tok_src = args.tokenizer_dir or args.adapter or model_name
+    tokenizer = AutoTokenizer.from_pretrained(tok_src, trust_remote_code=True)
     load_kwargs: dict = {
         "trust_remote_code": True,
         "device_map": args.device,
@@ -89,6 +96,12 @@ def main() -> None:
         load_kwargs["torch_dtype"] = torch.float16
 
     model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
+    if len(tokenizer) != model.get_input_embeddings().weight.shape[0]:
+        print(
+            f"[eval] resize embeddings {model.get_input_embeddings().weight.shape[0]} -> {len(tokenizer)}",
+            flush=True,
+        )
+        model.resize_token_embeddings(len(tokenizer))
     if args.adapter:
         from peft import PeftModel
 

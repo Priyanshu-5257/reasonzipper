@@ -40,6 +40,7 @@ def main() -> None:
     p.add_argument("--sft-adapter", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument("--model", type=str, default=None)
+    p.add_argument("--tokenizer-dir", type=Path, default=None)
     p.add_argument("--max-steps", type=int, default=None)
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--seed", type=int, default=None)
@@ -68,7 +69,8 @@ def main() -> None:
     if args.limit:
         rows = rows[: args.limit]
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tok_src = str(args.tokenizer_dir or args.sft_adapter or model_name)
+    tokenizer = AutoTokenizer.from_pretrained(tok_src, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -113,6 +115,8 @@ def main() -> None:
         torch_dtype=torch.float16,
         trust_remote_code=True,
     )
+    if len(tokenizer) != base.get_input_embeddings().weight.shape[0]:
+        base.resize_token_embeddings(len(tokenizer))
     base.config.torch_dtype = torch.float16
     base = prepare_model_for_kbit_training(base, use_gradient_checkpointing=True)
     model = PeftModel.from_pretrained(base, str(args.sft_adapter), is_trainable=True)
