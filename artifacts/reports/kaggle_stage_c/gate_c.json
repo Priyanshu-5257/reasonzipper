@@ -1,50 +1,73 @@
 {
   "model": "Qwen/Qwen3-1.7B",
-  "status": "partial_complete_grpo_failed",
+  "resumed": false,
+  "val_limit": 100,
   "a0_cached": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
     "accuracy": 0.65,
     "mean_reasoning_tokens": 48.91,
-    "n": 100,
     "cached": true
   },
   "b1_shortcot_cached": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
     "accuracy": 0.74,
     "mean_reasoning_tokens": 21.48,
-    "n": 100,
-    "cached": true
-  },
-  "b2_grpo_cached": {
-    "accuracy": 0.75,
-    "mean_reasoning_tokens": 21.42,
-    "n": 100,
     "cached": true
   },
   "c0_filler": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
     "accuracy": 0.56,
+    "malformed_rate": 0.0,
     "mean_reasoning_tokens": 6.56,
-    "n": 100
+    "median_reasoning_tokens": 7,
+    "wall_clock_s": 148.98435126000004,
+    "max_new_tokens": 256,
+    "seed": 42
   },
   "c1_codes": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
     "accuracy": 0.61,
+    "malformed_rate": 0.0,
     "mean_reasoning_tokens": 4.21,
     "median_reasoning_tokens": 4,
+    "wall_clock_s": 124.04535232900002,
+    "max_new_tokens": 256,
+    "seed": 42
+  },
+  "c3_grpo": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
     "n": 100,
-    "malformed_rate": 0.0
+    "accuracy": 0.7,
+    "malformed_rate": 0.0,
+    "mean_reasoning_tokens": 4.81,
+    "median_reasoning_tokens": 4,
+    "wall_clock_s": 131.8451320250001,
+    "max_new_tokens": 256,
+    "seed": 42
   },
-  "c3_grpo": null,
-  "c3_error": "AttributeError: TrainableTokensWrapper has no attribute bias (TRL fused LM-head during GRPO)",
   "c1_vs_c0_acc_delta": 0.04999999999999993,
-  "c1_vs_a0": {
-    "acc_delta": -0.040000000000000036,
-    "reasoning_token_reduction": 0.9139235330198323
+  "c3_vs_a0": {
+    "acc_delta": 0.04999999999999993,
+    "reasoning_token_reduction": 0.9016561030464117
   },
-  "c1_vs_b1": {
-    "acc_delta": -0.13,
-    "reasoning_token_reduction": 0.8040037243947858
+  "c3_vs_b1": {
+    "acc_delta": -0.040000000000000036,
+    "reasoning_token_reduction": 0.7760707635009312
   },
   "codes_beat_filler": true,
-  "compression_vs_a0_ok": false,
-  "gate_c_pass": false,
-  "note": "C1 vs C0 is the key discrete-token test. C3 GRPO did not complete.",
-  "kernel": "https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-stage-c"
+  "compression_vs_a0_ok": true,
+  "gate_c_pass": true,
+  "wall_clock_total_s": 1952.238434791565,
+  "kernel": "https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-stage-c-resume",
+  "status": "complete",
+  "note": "C3 GRPO completed after keeping GRPOTrainer.compute_loss (override_compute_loss=False)."
 }

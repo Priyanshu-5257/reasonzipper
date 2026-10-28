@@ -12,7 +12,7 @@ A small LLM can replace long English chain-of-thought with a short sequence of *
 |---|---|---|
 | **A** | Does thinking help on this task? | **Pass** |
 | **B** | Can *short English* CoT compress reasoning? | **Pass** (control / baseline) |
-| **C** | Can *unreadable discrete codes* do the same? | **Partial** (C1/C0 done; C3 GRPO failed) |
+| **C** | Can *unreadable discrete codes* do the same? | **Pass** (after GRPO fix) |
 
 ---
 
@@ -56,7 +56,7 @@ Artifacts: `artifacts/reports/kaggle_stage_b/gate_b.json`
 
 ## Stage C — discrete unreadable codes (original hypothesis)
 
-Kernel: [reasonzipper-stage-c](https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-stage-c) (v2)
+Kernel: [reasonzipper-stage-c-resume](https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-stage-c-resume) (GRPO fix rerun; full C1→C3)
 
 **Method**
 1. Add 128 special tokens `<|r000|>…<|r127|>`.
@@ -64,7 +64,7 @@ Kernel: [reasonzipper-stage-c](https://www.kaggle.com/code/zenitsu1agatsuma/reas
 3. Target format: `<think><|r014|><|r003|>…</think>\nERROR_LINE=…`
 4. **C1:** QLoRA SFT on code sequences (150 steps) + trainable new token rows.
 5. **C0:** Matched-budget **filler** control (repeat `<|r000|>`).
-6. **C3:** GRPO on code student — **failed** (TRL fused LM-head × PEFT `TrainableTokensWrapper` has no `.bias`).
+6. **C3:** GRPO on code student (40 steps). PEFT `TrainableTokensWrapper.bias=None`; SFT uses HF `compute_loss`, GRPO keeps `GRPOTrainer.compute_loss`.
 
 ### Results (n=100 val, self-generated codes)
 
@@ -74,21 +74,21 @@ Kernel: [reasonzipper-stage-c](https://www.kaggle.com/code/zenitsu1agatsuma/reas
 | B1 short English (cached) | 74% | 21.5 | readable short CoT |
 | **C1 discrete codes** | **61%** | **4.21** | unreadable `<\|r…\|>` |
 | **C0 filler control** | **56%** | **6.56** | same budget, meaningless codes |
-| C3 GRPO | — | — | not completed |
+| **C3 + GRPO** | **70%** | **4.81** | +5pp vs A0, **−90%** toks |
 
 ### Gate C checks
 
 | Check | Result |
 |---|---|
-| Codes beat filler by >2pp? | **Yes** (61% vs 56%, +5pp) |
-| ≥30% fewer toks vs A0 with ≤2pp acc drop? | **No** (−4pp vs A0; toks −91%) |
-| **gate_c_pass** | **False** (accuracy regression vs A0) |
+| Codes beat filler by >2pp? | **Yes** (C1 61% vs C0 56%; C3 70%) |
+| ≥30% fewer toks vs A0 with ≤2pp acc drop? | **Yes** (C3 −90% toks, +5pp acc) |
+| **gate_c_pass** | **True** |
 
 ### Interpretation
 
-- Discrete codes **are shorter** than A0/B1 and **beat the filler control**, so the codebook is not pure noise.
-- They do **not** yet match A0/B1 accuracy on this preview; short English (Stage B) remains stronger.
-- C3 length/correctness RL did not run — fix GRPO fused-head path and rerun before claiming full Stage C.
+- Discrete codes compress far harder than short English (−90% vs −56% toks vs A0).
+- C1 alone underperforms A0 (−4pp); **C3 GRPO recovers to 70%**, beating A0 and staying well under B1 length.
+- Short English (B) still leads on raw accuracy (75%); codes win on compression with competitive accuracy after RL.
 
 Artifacts: `artifacts/reports/kaggle_stage_c/gate_c.json`
 
@@ -101,14 +101,14 @@ Artifacts: `artifacts/reports/kaggle_stage_c/gate_c.json`
 | B1 / C1 | Causal LM CE (SFT) on target completion |
 | B2 / C3 | GRPO with correctness-first length reward; `beta=0` (no reasoning KL) |
 | T4 note | Mixed precision **off** (FP32 LoRA); FP16 GradScaler × BF16 grads crashes |
+| PEFT+TRL | Patch `TrainableTokensWrapper.bias`; do **not** replace GRPO `compute_loss` with HF Trainer |
 
 ---
 
 ## Next actions
 
-1. Patch GRPO the same way as code-SFT (disable fused LM-head) and finish C3.
-2. Optional: stronger codebook (learned VQ / checkpoint aux heads) if C1 plateau.
-3. Sealed ID/OOD/ProcessBench eval once a Stage C candidate is stable.
+1. Optional: stronger codebook (learned VQ / checkpoint aux heads) to close the gap to B2 accuracy.
+2. Sealed ID/OOD/ProcessBench eval on the C3 candidate.
 
 ---
 
