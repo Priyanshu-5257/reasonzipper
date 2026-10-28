@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from reasonzipper.existing_vocab import assert_original_vocabulary
 from reasonzipper.t4_train import (
     force_t4_fp16_env,
     prepare_qlora_for_t4,
@@ -40,6 +41,17 @@ def main() -> None:
     p.add_argument("--max-steps", type=int, default=None, help="Override epochs with steps")
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--seed", type=int, default=None)
+    p.add_argument(
+        "--enable-thinking",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Chat-template thinking flag (False for answer-only / Approach A-SFT)",
+    )
+    p.add_argument(
+        "--require-original-vocab",
+        action="store_true",
+        help="Abort if tokenizer/embeddings diverge (Approach A existing-vocab)",
+    )
     args = p.parse_args()
 
     with args.config.open() as f:
@@ -73,7 +85,9 @@ def main() -> None:
         ]
         try:
             return tokenizer.apply_chat_template(
-                messages, tokenize=False, enable_thinking=True
+                messages,
+                tokenize=False,
+                enable_thinking=bool(args.enable_thinking),
             )
         except TypeError:
             return tokenizer.apply_chat_template(messages, tokenize=False)
@@ -94,6 +108,9 @@ def main() -> None:
         torch_dtype=torch.float16,
         trust_remote_code=True,
     )
+    if args.require_original_vocab:
+        meta_vocab = assert_original_vocabulary(base, tokenizer, label="sft-load")
+        print(f"[sft] original vocab ok {meta_vocab}", flush=True)
 
     peft_config = LoraConfig(
         r=int(tcfg["lora_r"]),

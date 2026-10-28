@@ -1,0 +1,37 @@
+# Approach A — unconstrained existing-token reasoning (synthetic pilot)
+seed: 42
+model_name: Qwen/Qwen3-1.7B
+base_config: configs/baseline.yaml
+
+train:
+  method: existing_vocab_a
+  # Answer-only SFT (F4 / A-SFT)
+  method_sft: sft_answer_only
+  epochs: 1
+  sft_steps: 150
+  sft_limit: 4000
+  lr: 1.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, v_proj, o_proj]
+  microbatch: 1
+  grad_accum: 8
+  max_seq_len: 768
+  eval_every_steps: 100
+  # Correctness-first length GRPO (A-RL)
+  grpo_steps: 80
+  grpo_limit: 512
+  group_size: 4
+  beta: 0.0
+  scale_rewards: false
+  loss_type: dr_grpo
+  alpha: 0.2
+  length_budget_B: 128
+  max_completion_tokens: 256
+  max_updates: 80
+  eval_every: 40
+
+eval:
+  val_limit: 100
+  max_new_tokens: 256

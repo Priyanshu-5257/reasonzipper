@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from reasonzipper.existing_vocab import assert_original_vocabulary
 from reasonzipper.metrics import extract_reasoning_span, score_prediction
 from reasonzipper.reward import correctness_first_rewards
 from reasonzipper.t4_train import (
@@ -46,6 +47,11 @@ def main() -> None:
     p.add_argument("--max-steps", type=int, default=None)
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--seed", type=int, default=None)
+    p.add_argument(
+        "--require-original-vocab",
+        action="store_true",
+        help="Abort if tokenizer/embeddings diverge (Approach A/B existing-vocab)",
+    )
     args = p.parse_args()
 
     with args.config.open() as f:
@@ -117,7 +123,10 @@ def main() -> None:
         torch_dtype=torch.float16,
         trust_remote_code=True,
     )
-    if len(tokenizer) != base.get_input_embeddings().weight.shape[0]:
+    if args.require_original_vocab:
+        meta_vocab = assert_original_vocabulary(base, tokenizer, label="grpo-load")
+        print(f"[grpo] original vocab ok {meta_vocab}", flush=True)
+    elif len(tokenizer) != base.get_input_embeddings().weight.shape[0]:
         base.resize_token_embeddings(len(tokenizer))
     base.config.torch_dtype = torch.float16
     base = prepare_model_for_kbit_training(base, use_gradient_checkpointing=True)
@@ -125,6 +134,8 @@ def main() -> None:
     cast_trainable_away_from_bf16(model)
     patch_trainable_tokens_lm_head(model)
     model.config.use_cache = False
+    if args.require_original_vocab:
+        assert_original_vocabulary(model, tokenizer, label="grpo-peft")
 
     def reward_fn(completions, first_error_line, **kwargs):
         # completions: list[str]; first_error_line aligned 1:1 with completions
