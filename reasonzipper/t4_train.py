@@ -92,20 +92,29 @@ def patch_trainable_tokens_lm_head(model: Any) -> int:
     return n
 
 
-def disable_trl_fused_lm_head(trainer: Any) -> None:
-    """Prefer HF Trainer.compute_loss; clear fused-head flags when present."""
-    from transformers.trainer import Trainer as HfTrainer
+def disable_trl_fused_lm_head(trainer: Any, *, override_compute_loss: bool = True) -> None:
+    """
+    Avoid TrainableTokensWrapper.bias crashes in TRL fused LM-head CE.
 
-    def _compute_loss(model, inputs, return_outputs=False, num_items_in_batch=None):
-        return HfTrainer.compute_loss(
-            trainer,
-            model,
-            inputs,
-            return_outputs=return_outputs,
-            num_items_in_batch=num_items_in_batch,
-        )
+    For SFTTrainer, override_compute_loss=True routes through HF Trainer.compute_loss
+    (safe for standard LM CE). For GRPOTrainer this MUST be False — GRPO's
+    compute_loss expects custom batch fields; replacing it with HF compute_loss
+    causes `input_ids`/`inputs_embeds` conflicts.
+    """
+    if override_compute_loss:
+        from transformers.trainer import Trainer as HfTrainer
 
-    trainer.compute_loss = _compute_loss
+        def _compute_loss(model, inputs, return_outputs=False, num_items_in_batch=None):
+            return HfTrainer.compute_loss(
+                trainer,
+                model,
+                inputs,
+                return_outputs=return_outputs,
+                num_items_in_batch=num_items_in_batch,
+            )
+
+        trainer.compute_loss = _compute_loss
+
     for attr in ("use_fused_lm_head", "fused_linear_cross_entropy"):
         if hasattr(trainer, attr):
             setattr(trainer, attr, False)
@@ -116,8 +125,11 @@ def disable_trl_fused_lm_head(trainer: Any) -> None:
                     setattr(trainer.args, attr, False)
                 except Exception:
                     pass
-    # Patch model wrappers that TRL fused CE may touch
     model = getattr(trainer, "model", None)
     if model is not None:
         patch_trainable_tokens_lm_head(model)
-    print("[t4] disabled TRL fused LM-head path", flush=True)
+    print(
+        f"[t4] disabled TRL fused LM-head path "
+        f"(override_compute_loss={override_compute_loss})",
+        flush=True,
+    )

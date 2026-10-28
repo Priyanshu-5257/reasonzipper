@@ -216,7 +216,8 @@ def main() -> None:
         trainer_kwargs["tokenizer"] = tokenizer
         trainer = GRPOTrainer(**trainer_kwargs)
 
-    disable_trl_fused_lm_head(trainer)
+    # Keep GRPOTrainer.compute_loss; only patch bias / fused flags.
+    disable_trl_fused_lm_head(trainer, override_compute_loss=False)
     patch_trainable_tokens_lm_head(trainer.model)
 
     print("[grpo] training...", flush=True)
