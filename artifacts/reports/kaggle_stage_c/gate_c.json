@@ -1,0 +1,50 @@
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "status": "partial_complete_grpo_failed",
+  "a0_cached": {
+    "accuracy": 0.65,
+    "mean_reasoning_tokens": 48.91,
+    "n": 100,
+    "cached": true
+  },
+  "b1_shortcot_cached": {
+    "accuracy": 0.74,
+    "mean_reasoning_tokens": 21.48,
+    "n": 100,
+    "cached": true
+  },
+  "b2_grpo_cached": {
+    "accuracy": 0.75,
+    "mean_reasoning_tokens": 21.42,
+    "n": 100,
+    "cached": true
+  },
+  "c0_filler": {
+    "accuracy": 0.56,
+    "mean_reasoning_tokens": 6.56,
+    "n": 100
+  },
+  "c1_codes": {
+    "accuracy": 0.61,
+    "mean_reasoning_tokens": 4.21,
+    "median_reasoning_tokens": 4,
+    "n": 100,
+    "malformed_rate": 0.0
+  },
+  "c3_grpo": null,
+  "c3_error": "AttributeError: TrainableTokensWrapper has no attribute bias (TRL fused LM-head during GRPO)",
+  "c1_vs_c0_acc_delta": 0.04999999999999993,
+  "c1_vs_a0": {
+    "acc_delta": -0.040000000000000036,
+    "reasoning_token_reduction": 0.9139235330198323
+  },
+  "c1_vs_b1": {
+    "acc_delta": -0.13,
+    "reasoning_token_reduction": 0.8040037243947858
+  },
+  "codes_beat_filler": true,
+  "compression_vs_a0_ok": false,
+  "gate_c_pass": false,
+  "note": "C1 vs C0 is the key discrete-token test. C3 GRPO did not complete.",
+  "kernel": "https://www.kaggle.com/code/zenitsu1agatsuma/reasonzipper-stage-c"
+}

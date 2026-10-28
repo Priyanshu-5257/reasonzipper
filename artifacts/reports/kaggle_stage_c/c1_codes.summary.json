@@ -1,0 +1,7 @@
+{
+  "accuracy": 0.61,
+  "mean_reasoning_tokens": 4.21,
+  "median_reasoning_tokens": 4,
+  "n": 100,
+  "malformed_rate": 0.0
+}
