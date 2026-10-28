@@ -34,11 +34,19 @@ LIMIT_PB = os.environ.get("RZ_LIMIT_PROCESSBENCH")
 A0_LIMIT_ID = os.environ.get("RZ_A0_LIMIT_ID", "1000")
 A0_LIMIT_OOD = os.environ.get("RZ_A0_LIMIT_OOD", "500")
 A0_LIMIT_PB = os.environ.get("RZ_A0_LIMIT_PROCESSBENCH", "400")
-# Fast models first so we still get C3 sealed numbers if time runs out.
+# Quota-friendly default: C3 only (skip slow A0 / optional C1).
 MODELS = [
     m.strip()
-    for m in os.environ.get("RZ_SEALED_MODELS", "c3,c1,a0").split(",")
+    for m in os.environ.get("RZ_SEALED_MODELS", "c3").split(",")
     if m.strip()
+]
+# Which splits to run (comma-separated). Default: all sealed sets.
+SPLIT_NAMES = [
+    s.strip()
+    for s in os.environ.get(
+        "RZ_SEALED_SPLITS", "processbench"
+    ).split(",")
+    if s.strip()
 ]
 
 
@@ -159,11 +167,15 @@ def main() -> None:
     print("[sealed] prep ProcessBench", flush=True)
     py(["scripts/prep_processbench.py", "--output-dir", str(pb_dir)])
 
-    splits = {
+    splits_all = {
         "test_id": (DATA / "test_id" / "examples.jsonl", LIMIT_ID),
         "test_ood": (DATA / "test_ood" / "examples.jsonl", LIMIT_OOD),
         "processbench": (pb_dir / "examples.jsonl", LIMIT_PB),
     }
+    splits = {k: splits_all[k] for k in SPLIT_NAMES if k in splits_all}
+    if not splits:
+        raise SystemExit(f"No valid splits in {SPLIT_NAMES}")
+    print(f"[sealed] models={MODELS} splits={list(splits)}", flush=True)
 
     def limits_for(tag: str) -> dict[str, str | None]:
         if tag.startswith("a0"):
