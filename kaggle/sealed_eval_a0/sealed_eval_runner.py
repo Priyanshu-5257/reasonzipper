@@ -24,7 +24,9 @@ DATA = WORK / "data"
 INPUT_ROOT = Path("/kaggle/input")
 
 MODEL = os.environ.get("RZ_MODEL", "Qwen/Qwen3-1.7B")
-MAX_NEW = int(os.environ.get("RZ_MAX_NEW_TOKENS", "256"))
+# A0 English CoT needs headroom to finish with ERROR_LINE= (Stage A used 512).
+# 256 truncated many sealed A0 runs → high "malformed" / missing_close.
+MAX_NEW = int(os.environ.get("RZ_MAX_NEW_TOKENS", "512"))
 # Optional global caps (apply to every model if set)
 LIMIT_ID = os.environ.get("RZ_LIMIT_ID")
 LIMIT_OOD = os.environ.get("RZ_LIMIT_OOD")
@@ -42,7 +44,9 @@ MODELS = [
 ]
 SPLIT_NAMES = [
     s.strip()
-    for s in os.environ.get("RZ_SEALED_SPLITS", "processbench").split(",")
+    for s in os.environ.get(
+        "RZ_SEALED_SPLITS", "test_ood,processbench"
+    ).split(",")
     if s.strip()
 ]
 

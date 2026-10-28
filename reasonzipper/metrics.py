@@ -48,7 +48,9 @@ def score_prediction(
     missing_close = False
     if THINK_OPEN in pred_text and THINK_CLOSE not in pred_text:
         missing_close = True
-    malformed = parsed is None or missing_close
+    # Format failure = cannot parse ERROR_LINE. An unclosed </think> alone
+    # (e.g. hit max_new_tokens) should not void a valid parsed answer.
+    malformed = parsed is None
     correct = (not malformed) and parsed == gold
     return {
         "parsed": parsed,
@@ -65,13 +67,15 @@ def build_prompt(problem: str, solution_lines: list[str], thinking: bool = True)
         "A student wrote a short solution. Identify the earliest incorrect line. "
         "If the solution is fully correct, answer ERROR_LINE=NONE. "
         "Otherwise answer ERROR_LINE=<N> with N the 1-based line number. "
-        "Put no explanation in the final answer."
+        "You may reason first, but your FINAL line must be exactly "
+        "ERROR_LINE=NONE or ERROR_LINE=<N> with no other text on that line."
     )
     user = f"{instruction}\n\nProblem:\n{problem}\n\nStudent solution:\n{lines}"
     if thinking:
-        return user
+        return user + (
+            "\n\nRemember: end with a single final line of the form ERROR_LINE=..."
+        )
     return user + "\n\nAnswer with only ERROR_LINE=..."
-
 
 _CODE_RE = re.compile(r"<\|r\d{3}\|>")
 

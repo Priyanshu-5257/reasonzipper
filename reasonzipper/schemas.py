@@ -43,19 +43,31 @@ def format_gold_answer(first_error_line: int | Literal["NONE"]) -> str:
 
 
 def parse_error_line(text: str) -> Optional[int | Literal["NONE"]]:
-    """Parse final-answer region; returns None if malformed."""
+    """Parse final-answer region; returns None if malformed.
+
+    Prefers the last ERROR_LINE= after the last </think> (Qwen often emits
+    an empty <think></think> then more text / extra closes). Falls back to
+    the last ERROR_LINE= anywhere in the string.
+    """
     import re
 
-    # Prefer last ERROR_LINE= occurrence (after </think> if present)
+    def _from(fragment: str) -> Optional[int | Literal["NONE"]]:
+        matches = list(
+            re.finditer(r"ERROR_LINE\s*=\s*(NONE|\d+)\b", fragment, re.IGNORECASE)
+        )
+        if not matches:
+            return None
+        val = matches[-1].group(1).upper()
+        if val == "NONE":
+            return "NONE"
+        n = int(val)
+        if n < 1:
+            return None
+        return n
+
     if "</think>" in text:
-        text = text.split("</think>", 1)[1]
-    m = re.search(r"ERROR_LINE\s*=\s*(NONE|\d+)\b", text.strip(), re.IGNORECASE)
-    if not m:
-        return None
-    val = m.group(1).upper()
-    if val == "NONE":
-        return "NONE"
-    n = int(val)
-    if n < 1:
-        return None
-    return n
+        after_last = text.rsplit("</think>", 1)[1]
+        parsed = _from(after_last)
+        if parsed is not None:
+            return parsed
+    return _from(text)
