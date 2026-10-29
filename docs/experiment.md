@@ -223,6 +223,7 @@ Hypothesis under test: **compressed-token computation** — fewer existing-token
 | Fix 4 `completion_tokens=len(new_tokens)`; all vs correct means; never shrink/resize for existing-vocab | `scripts/eval_model.py --require-original-vocab` |
 | Answer-label encoding control | `scripts/make_answer_label_codes.py` |
 | Cheap Kaggle diagnostic (no SFT/GRPO) | `kaggle/existing_vocab_b2_diag/` |
+| Oracle forced-codes on val (no SFT/GRPO) | `kaggle/existing_vocab_b2_oracle/` + `scripts/eval_oracle_codes.py` |
 
 **Gates before full training:** positive mean ΔNLL vs no-code on V1 select → oracle teacher-forced codes → self-generated SFT vs F4/F5 **and** answer-label control → GRPO only if SFT trade-off is useful. GSM8K before strong claims (synthetic answer space is tiny). Old `assign_trajectory_codes.py` (P_φ NN/CE) is deprecated for hypothesis tests.
 
