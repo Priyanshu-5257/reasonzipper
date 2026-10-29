@@ -1,0 +1,112 @@
+{
+  "approach": "B2_oracle_val",
+  "hypothesis": "compressed-token computation (oracle upper bound)",
+  "vocab_expanded": false,
+  "sft_run": false,
+  "grpo_run": false,
+  "n": 100,
+  "oracle": {
+    "func_only": {
+      "label": "func_only",
+      "force_mode": "codes",
+      "model": "Qwen/Qwen3-1.7B",
+      "n": 100,
+      "accuracy": 0.07,
+      "malformed_rate": 0.74,
+      "mean_completion_tokens": 26.06,
+      "wall_clock_s": 173.72847968399992,
+      "max_new_tokens": 32,
+      "oracle": true,
+      "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+      "reference_f4_accuracy": 0.7,
+      "reference_f5_accuracy": 0.7
+    },
+    "geom_plus_func": {
+      "label": "geom_plus_func",
+      "force_mode": "codes",
+      "model": "Qwen/Qwen3-1.7B",
+      "n": 100,
+      "accuracy": 0.07,
+      "malformed_rate": 0.62,
+      "mean_completion_tokens": 22.02,
+      "wall_clock_s": 149.16097585999978,
+      "max_new_tokens": 32,
+      "oracle": true,
+      "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+      "reference_f4_accuracy": 0.7,
+      "reference_f5_accuracy": 0.7
+    },
+    "random": {
+      "label": "random",
+      "force_mode": "codes",
+      "model": "Qwen/Qwen3-1.7B",
+      "n": 100,
+      "accuracy": 0.13,
+      "malformed_rate": 0.61,
+      "mean_completion_tokens": 23.73,
+      "wall_clock_s": 161.34199952400013,
+      "max_new_tokens": 32,
+      "oracle": true,
+      "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+      "reference_f4_accuracy": 0.7,
+      "reference_f5_accuracy": 0.7
+    },
+    "answer_label": {
+      "label": "answer_label",
+      "force_mode": "codes",
+      "model": "Qwen/Qwen3-1.7B",
+      "n": 100,
+      "accuracy": 0.0,
+      "malformed_rate": 0.38,
+      "mean_completion_tokens": 19.66,
+      "wall_clock_s": 132.87031907999972,
+      "max_new_tokens": 32,
+      "oracle": true,
+      "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+      "reference_f4_accuracy": 0.7,
+      "reference_f5_accuracy": 0.7
+    },
+    "empty_think": {
+      "label": "empty_think",
+      "force_mode": "empty_think",
+      "model": "Qwen/Qwen3-1.7B",
+      "n": 100,
+      "accuracy": 0.0,
+      "malformed_rate": 1.0,
+      "mean_completion_tokens": 32.0,
+      "wall_clock_s": 211.5113772929999,
+      "max_new_tokens": 32,
+      "oracle": true,
+      "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+      "reference_f4_accuracy": 0.7,
+      "reference_f5_accuracy": 0.7
+    }
+  },
+  "comparisons": {
+    "func_acc": 0.07,
+    "geom_acc": 0.07,
+    "random_acc": 0.13,
+    "label_acc": 0.0,
+    "empty_acc": 0.0,
+    "f4_reference": 0.7,
+    "f5_reference": 0.7,
+    "best_oracle_acc": 0.07,
+    "beats_empty": true,
+    "beats_random": false,
+    "beats_label": true,
+    "reaches_f4": false
+  },
+  "oracle_gate_pass": false,
+  "next_gate": [
+    "If oracle_gate_pass: SFT on selected codes + self-generated eval vs F4/F5/label",
+    "Prompt-label masking in train_sft before that SFT",
+    "GRPO only if self-generated SFT shows useful trade-off"
+  ],
+  "wall_clock_s": 4588.508345127106,
+  "config": {
+    "val_limit": 100,
+    "candidate_k": 32,
+    "n_codes": 3,
+    "max_new_tokens": 32
+  }
+}

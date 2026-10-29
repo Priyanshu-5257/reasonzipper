@@ -227,13 +227,47 @@ Hypothesis under test: **compressed-token computation** — fewer existing-token
 
 **Gates before full training:** positive mean ΔNLL vs no-code on V1 select → oracle teacher-forced codes → self-generated SFT vs F4/F5 **and** answer-label control → GRPO only if SFT trade-off is useful. GSM8K before strong claims (synthetic answer space is tiny). Old `assign_trajectory_codes.py` (P_φ NN/CE) is deprecated for hypothesis tests.
 
+### B2 cheap diagnostic (train n=64, K=32) — gate PASS
+
+Kernel: [reasonzipper-existing-b2-diag](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-existing-b2-diag)
+
+| Condition | Mean ΔNLL vs no-code (primary) |
+|---|---:|
+| func_only | 3.69 |
+| geom+func | 4.00 |
+| random | 0.77 |
+| answer-label | 0.30 |
+
+Answer-conditioned selection reduces answer NLL vs no-code/random on the **same** train slice (oracle-ish; not student accuracy).
+
+### B2 oracle on val (n=100) — gate FAIL
+
+Kernel: [reasonzipper-existing-b2-oracle](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-existing-b2-oracle)
+
+Force selected codes, then generate answer on frozen Qwen3-1.7B (`max_new_tokens=32`).
+
+| Condition | Acc |
+|---|---:|
+| func_only / geom+func | **7%** |
+| random codes | **13%** |
+| answer-label / empty think | 0% |
+| F4 / F5 reference | 70% |
+
+~74% malformed under func_only: model often ignores the closed think span, starts prose, and truncates without `ERROR_LINE=...`. Selected codes look like junk fragments (`但从 вообще extracting`, `_lim`, `NotEmptyӘ❙`), not readable reasoning.
+
+**Do not start SFT/GRPO on this recipe** until oracle forced-prefix accuracy beats random and approaches a useful bar vs F4 (or the eval protocol is fixed: longer answer budget / stricter stop / different selection).
+
+Examples + gate: `artifacts/reports/approach_b2_oracle/` (`README.md`, `examples_preview.json`, `gate_b2_oracle.json`).
+
 Artifacts:
 - `artifacts/reports/approach_a/gate_approach_a.json`
 - `artifacts/reports/approach_f5/gate_f5.json`
 - `artifacts/reports/approach_b/gate_approach_b.json`
 - `artifacts/reports/approach_b2/gate_approach_b2.json`
+- `artifacts/reports/approach_b2_diag/gate_b2_diag.json`
+- `artifacts/reports/approach_b2_oracle/gate_b2_oracle.json`
 
-Code: `kaggle/existing_vocab_{a,f5,b,b2,b2_diag}/`, `scripts/{make_answer_only,make_filler_thinking,make_trajectory_codes,collect_checkpoints,select_compressed_codes,make_answer_label_codes}.py`, `reasonzipper/{existing_vocab,compressed_selection,trajectory_selector}.py`
+Code: `kaggle/existing_vocab_{a,f5,b,b2,b2_diag,b2_oracle}/`, `scripts/{make_answer_only,make_filler_thinking,make_trajectory_codes,collect_checkpoints,select_compressed_codes,make_answer_label_codes,eval_oracle_codes}.py`, `reasonzipper/{existing_vocab,compressed_selection,trajectory_selector}.py`
 
 ---
 
@@ -251,9 +285,10 @@ Code: `kaggle/existing_vocab_{a,f5,b,b2,b2_diag}/`, `scripts/{make_answer_only,m
 
 ## Next actions
 
-1. Treat **F4** as the required control for any further existing-vocab work; only pursue B if it can beat F4 on a harder transfer set (e.g. GSM8K).
-2. Optional: document/publish C3 sealed ID/OOD as the main positive result (expanded vocab).
-3. Optional: score C3 on the same A0 OOD/PB seed-42 subsets (n=50) for matched head-to-head.
+1. **B2 revised:** oracle gate failed — pause SFT/GRPO; either fix forced-answer eval (malformed / length) and re-run oracle, or rethink selection so forced prefixes produce parseable `ERROR_LINE` answers that beat random.
+2. Treat **F4** as the required control for any further existing-vocab work; only pursue B if it can beat F4 on a harder transfer set (e.g. GSM8K).
+3. Optional: document/publish C3 sealed ID/OOD as the main positive result (expanded vocab).
+4. Optional: score C3 on the same A0 OOD/PB seed-42 subsets (n=50) for matched head-to-head.
 
 ---
 

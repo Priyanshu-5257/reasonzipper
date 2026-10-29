@@ -32,6 +32,10 @@ artifacts/**
 !artifacts/reports/**
 artifacts/reports/**/hf_cache/
 artifacts/reports/**/data/
+artifacts/reports/**/dl/
+artifacts/reports/**/dl_pull.log
+artifacts/reports/**/*_boot.log
+artifacts/reports/**/*_final.log
 
 # Model / cache
 *.bin

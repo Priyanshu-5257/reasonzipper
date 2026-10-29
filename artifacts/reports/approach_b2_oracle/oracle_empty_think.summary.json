@@ -1,0 +1,15 @@
+{
+  "label": "empty_think",
+  "force_mode": "empty_think",
+  "model": "Qwen/Qwen3-1.7B",
+  "n": 100,
+  "accuracy": 0.0,
+  "malformed_rate": 1.0,
+  "mean_completion_tokens": 32.0,
+  "wall_clock_s": 211.5113772929999,
+  "max_new_tokens": 32,
+  "oracle": true,
+  "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+  "reference_f4_accuracy": 0.7,
+  "reference_f5_accuracy": 0.7
+}

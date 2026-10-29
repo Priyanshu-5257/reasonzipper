@@ -1,0 +1,111 @@
+[
+  {
+    "tag": "CORRECT",
+    "id": "val_add_chain_00009",
+    "gold": "NONE",
+    "parsed": "NONE",
+    "code_token_ids": [
+      112193,
+      135167,
+      59408
+    ],
+    "code_text": "'但从 вообще extracting'",
+    "forced_prefix": "<think>\n但从 вообще extracting\n</think>\n",
+    "generated": "</think>\n\nThe student's solution is fully correct. All the steps are accurate and the final answer is correct.\n\nERROR_LINE=NONE",
+    "delta_nll": 5.105701923370361,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  },
+  {
+    "tag": "CORRECT",
+    "id": "val_mul_chain_00011",
+    "gold": 3,
+    "parsed": 3,
+    "code_token_ids": [
+      27416,
+      146377,
+      146491
+    ],
+    "code_text": "'NotEmptyӘ❙'",
+    "forced_prefix": "<think>\nNotEmptyӘ❙\n</think>\n",
+    "generated": "ERROR_LINE=3",
+    "delta_nll": 1.9027767181396484,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  },
+  {
+    "tag": "WRONG",
+    "id": "val_linear_eq_00014",
+    "gold": "NONE",
+    "parsed": 2,
+    "code_token_ids": [
+      112193,
+      59408,
+      146491
+    ],
+    "code_text": "'但从 extracting❙'",
+    "forced_prefix": "<think>\n但从 extracting❙\n</think>\n",
+    "generated": "ERROR_LINE=2",
+    "delta_nll": 5.2960309982299805,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  },
+  {
+    "tag": "WRONG",
+    "id": "val_percent_of_00015",
+    "gold": "NONE",
+    "parsed": 2,
+    "code_token_ids": [
+      73855,
+      8601,
+      73941
+    ],
+    "code_text": "' Modification Field/chart'",
+    "forced_prefix": "<think>\n Modification Field/chart\n</think>\n",
+    "generated": "ERROR_LINE=2",
+    "delta_nll": 8.379379034042358,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  },
+  {
+    "tag": "MALFORMED",
+    "id": "val_add_chain_00000",
+    "gold": "NONE",
+    "parsed": null,
+    "code_token_ids": [
+      112193,
+      135167,
+      59408
+    ],
+    "code_text": "'但从 вообще extracting'",
+    "forced_prefix": "<think>\n但从 вообще extracting\n</think>\n",
+    "generated": "</think>\n\nThe student's solution is fully correct. All the steps and calculations are accurate:\n\n1. $ 69 + 54 = 12",
+    "delta_nll": 5.09358024597168,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  },
+  {
+    "tag": "MALFORMED",
+    "id": "val_sub_chain_00001",
+    "gold": 1,
+    "parsed": null,
+    "code_token_ids": [
+      58191
+    ],
+    "code_text": "'_lim'",
+    "forced_prefix": "<think>\n_lim\n</think>\n",
+    "generated": "</think>\n\nLet's examine the student's solution step by step:\n\n1. **Line 1:** \"68 - 11 = -57\"",
+    "delta_nll": 1.411933422088623,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  },
+  {
+    "tag": "RANDOM_CORRECT",
+    "id": "val_order_ops_00004",
+    "gold": 2,
+    "parsed": 2,
+    "code_token_ids": [
+      1881,
+      1881
+    ],
+    "code_text": "'tyty'",
+    "forced_prefix": "<think>\ntyty\n</think>\n",
+    "generated": "ERROR_LINE=2",
+    "delta_nll": 2.0178945064544678,
+    "prompt_head": "A student wrote a short solution. Identify the earliest incorrect line. If the solution is fully correct, answer ERROR_LINE=NONE. Otherwise answer ERROR_LINE=<N> with N the 1-based line number. You may reason first, but your FINAL line must be exactly ERROR_LINE=NONE or ERROR_LIN"
+  }
+]

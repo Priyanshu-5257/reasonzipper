@@ -1,0 +1,15 @@
+{
+  "label": "geom_plus_func",
+  "force_mode": "codes",
+  "model": "Qwen/Qwen3-1.7B",
+  "n": 100,
+  "accuracy": 0.07,
+  "malformed_rate": 0.62,
+  "mean_completion_tokens": 22.02,
+  "wall_clock_s": 149.16097585999978,
+  "max_new_tokens": 32,
+  "oracle": true,
+  "note": "Privileged upper bound if codes were selected with gold answers; not self-generated student accuracy.",
+  "reference_f4_accuracy": 0.7,
+  "reference_f5_accuracy": 0.7
+}
