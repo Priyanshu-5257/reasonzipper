@@ -1,0 +1,52 @@
+{
+  "approach": "B_v1_trajectory_existing_ids",
+  "vocab_expanded": false,
+  "note": "Verifier-block signatures mapped into a frozen candidate set of original token IDs; no P_phi hidden-state selector yet.",
+  "f4_cached": {
+    "accuracy": 0.7,
+    "mean_reasoning_tokens": 0.0,
+    "cached": true
+  },
+  "a_grpo_cached": {
+    "accuracy": 0.64,
+    "mean_reasoning_tokens": 1.0,
+    "cached": true
+  },
+  "b_sft": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
+    "accuracy": 0.48,
+    "malformed_rate": 0.03,
+    "mean_reasoning_tokens": 3.22,
+    "median_reasoning_tokens": 3,
+    "wall_clock_s": 108.158288632,
+    "max_new_tokens": 256,
+    "seed": 42
+  },
+  "b_grpo": {
+    "model": "Qwen/Qwen3-1.7B",
+    "thinking": true,
+    "n": 100,
+    "accuracy": 0.64,
+    "malformed_rate": 0.0,
+    "mean_reasoning_tokens": 3.12,
+    "median_reasoning_tokens": 3,
+    "wall_clock_s": 108.90872155099987,
+    "max_new_tokens": 256,
+    "seed": 42
+  },
+  "vs_f4_acc_delta": -0.05999999999999994,
+  "vs_a_grpo_acc_delta": 0.0,
+  "pilot_gate": {
+    "beats_f4": false,
+    "beats_a": false
+  },
+  "wall_clock_s": 1556.339295387268,
+  "config": {
+    "sft_steps": 150,
+    "grpo_steps": 80,
+    "candidate_k": 512,
+    "max_codes": 8
+  }
+}

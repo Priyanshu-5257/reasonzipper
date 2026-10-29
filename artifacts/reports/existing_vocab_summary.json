@@ -1,0 +1,21 @@
+{
+  "task": "synthetic_first_error_val",
+  "n": 100,
+  "seed": 42,
+  "model": "Qwen/Qwen3-1.7B",
+  "vocab_expanded": false,
+  "results": {
+    "f4_answer_only": {"accuracy": 0.7, "mean_reasoning_tokens": 0.0},
+    "a_grpo": {"accuracy": 0.64, "mean_reasoning_tokens": 1.0},
+    "f5_grpo": {"accuracy": 0.7, "mean_reasoning_tokens": 3.0},
+    "b_v1_grpo": {"accuracy": 0.64, "mean_reasoning_tokens": 3.12},
+    "b2_grpo": {"accuracy": 0.26, "mean_reasoning_tokens": 7.58, "usage_entropy": 0.099}
+  },
+  "verdict": "F4 dominates existing-vocab compressed-thinking pilots on this synthetic task; B2 codebook collapsed.",
+  "gates": {
+    "approach_a": "artifacts/reports/approach_a/gate_approach_a.json",
+    "f5": "artifacts/reports/approach_f5/gate_f5.json",
+    "b_v1": "artifacts/reports/approach_b/gate_approach_b.json",
+    "b2": "artifacts/reports/approach_b2/gate_approach_b2.json"
+  }
+}

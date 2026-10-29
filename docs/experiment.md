@@ -167,12 +167,66 @@ On in-distribution sealed **test_id**, C3 looks strongly ahead of A0 (~75% vs ~4
 
 ---
 
+## Existing-vocabulary POC (no new tokens)
+
+Plan: `ReasonZipper_Existing_Vocabulary_Research_POC.md`  
+Constraint: unchanged Qwen3 tokenizer / no `resize` growth; stock embedding padding (151936 vs 151669) is allowed.
+
+Kernels (priyanshu3rdvivek / `access_token_4`):
+- A: [reasonzipper-existing-a](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-existing-a)
+- F5: [reasonzipper-existing-f5](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-existing-f5)
+- B-v1: [reasonzipper-existing-b](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-existing-b)
+- B-full: [reasonzipper-existing-b2](https://www.kaggle.com/code/priyanshu3rdvivek/reasonzipper-existing-b2)
+
+All numbers below: synthetic **val n=100**, same generator seed 42, Qwen3-1.7B QLoRA on 1×T4.
+
+| Run | Acc | Mean r-toks | Notes |
+|---|---:|---:|---|
+| A0 thinking-on (cached Stage A) | 65% | 48.9 | Historical reference |
+| **F4 answer-only SFT** | **70%** | **0** | Thinking off; strongest existing-vocab baseline |
+| A-SFT (thinking on) | 63% | 1.0 | After answer-only SFT |
+| A-GRPO | 64% | 1.0 | GRPO often `loss≈0` (identical short rollouts) |
+| F5 filler SFT | 67% | 3.0 | 16× `.` inside `<think>` |
+| **F5 filler GRPO** | **70%** | **3.0** | Ties F4; filler ≠ useful codes |
+| B-v1 SFT (hash→existing IDs) | 48% | 3.2 | Verifier-block → candidate set |
+| B-v1 GRPO | 64% | 3.1 | Recovers to A, still < F4 |
+| B2-SFT (`P_phi` hidden states) | 27% | 5.1 | Codebook collapse |
+| B2-GRPO | 26% | 7.6 | `usage_entropy≈0.10`; does not beat F4/F5 |
+
+### Gates
+
+| Check | Result |
+|---|---|
+| A-GRPO beats F4? | **No** (−6pp) |
+| F5 beats F4? | **No** (tie at 70%) |
+| B-v1 beats F4 / A? | **No** / ties A |
+| B2 beats F4 / F5? | **No** (−44pp) |
+
+### Interpretation
+
+- On this synthetic first-error task, **answer-only fine-tuning (F4) dominates** existing-vocab “compressed thinking.”
+- Approach A did not discover a useful short private language; it stayed near-empty `<think>` + direct `ERROR_LINE=`.
+- Matched filler (F5) matches F4 accuracy without needing learned codes.
+- Trajectory→existing-ID (B-v1) and hidden-state `P_phi` (B2) failed to clear F4; B2 collapsed the codebook.
+- **Expanded-vocab C3** (Stage C / sealed) remains the positive compression result under a *different* constraint (new `<|rXXX|>` tokens).
+
+Artifacts:
+- `artifacts/reports/approach_a/gate_approach_a.json`
+- `artifacts/reports/approach_f5/gate_f5.json`
+- `artifacts/reports/approach_b/gate_approach_b.json`
+- `artifacts/reports/approach_b2/gate_approach_b2.json`
+
+Code: `kaggle/existing_vocab_{a,f5,b,b2}/`, `scripts/{make_answer_only,make_filler_thinking,make_trajectory_codes,collect_checkpoints,assign_trajectory_codes}.py`, `reasonzipper/{existing_vocab,trajectory_selector}.py`
+
+---
+
 ## Training / loss summary
 
 | Stage | Objective |
 |---|---|
 | B1 / C1 | Causal LM CE (SFT) on target completion |
 | B2 / C3 | GRPO with correctness-first length reward; `beta=0` (no reasoning KL) |
+| Existing-vocab A/F5/B | Answer-only or code/filler SFT + same GRPO recipe; **no new token IDs** |
 | T4 note | Mixed precision **off** (FP32 LoRA); FP16 GradScaler × BF16 grads crashes |
 | PEFT+TRL | Patch `TrainableTokensWrapper.bias`; do **not** replace GRPO `compute_loss` with HF Trainer |
 
@@ -180,9 +234,9 @@ On in-distribution sealed **test_id**, C3 looks strongly ahead of A0 (~75% vs ~4
 
 ## Next actions
 
-1. Optional: stronger codebook (learned VQ / checkpoint aux heads) to close the gap to B2 accuracy.
-2. Optional: score C3 on the same A0 OOD/PB seed-42 subsets (n=50) for matched head-to-head.
-3. Optional: fix A0 think-span accounting / prompting so English CoT stays inside `<think>`.
+1. Treat **F4** as the required control for any further existing-vocab work; only pursue B if it can beat F4 on a harder transfer set (e.g. GSM8K).
+2. Optional: document/publish C3 sealed ID/OOD as the main positive result (expanded vocab).
+3. Optional: score C3 on the same A0 OOD/PB seed-42 subsets (n=50) for matched head-to-head.
 
 ---
 
