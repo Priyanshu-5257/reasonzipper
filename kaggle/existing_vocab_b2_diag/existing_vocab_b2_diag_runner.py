@@ -1,11 +1,13 @@
 """Cheap B2′ diagnostic on Kaggle — NO SFT / NO GRPO.
 
-Engineering path:
-  generate data → collect consecutive checkpoints → V1 compressed-AR select
-  → answer-label control JSONL → random control → write gate JSON.
+Runs matched ablations on the same checkpoint sample:
+  - func_only select (alpha=0, beta=1)
+  - geom_plus_func select (alpha=1, beta=1, z-scored)
+  - random control (recomputed NLL after replacement)
+  - answer-label codes scored with the same answer-only NLL
 
-Proceed to SFT only if mean ΔNLL vs no-code is clearly positive and beats
-random / label-shortcut diagnostics on the same sample.
+Gate requires selected sequences to beat no-code AND random on mean ΔNLL /
+mean final answer NLL. Positive ΔNLL alone is not enough (selection bias).
 """
 
 from __future__ import annotations
@@ -28,8 +30,11 @@ MODEL = os.environ.get("RZ_MODEL", "Qwen/Qwen3-1.7B")
 COLLECT_LIMIT = int(os.environ.get("RZ_COLLECT_LIMIT", "64"))
 CAND_K = int(os.environ.get("RZ_CANDIDATE_K", "32"))
 N_CODES = int(os.environ.get("RZ_N_CODES", "3"))
-ALPHA = float(os.environ.get("RZ_ALPHA", "0.0"))
-BETA = float(os.environ.get("RZ_BETA", "1.0"))
+# Optional overrides; defaults run both ablations below.
+FUNC_ALPHA = float(os.environ.get("RZ_FUNC_ALPHA", "0.0"))
+FUNC_BETA = float(os.environ.get("RZ_FUNC_BETA", "1.0"))
+GEOM_ALPHA = float(os.environ.get("RZ_GEOM_ALPHA", "1.0"))
+GEOM_BETA = float(os.environ.get("RZ_GEOM_BETA", "1.0"))
 
 
 def run(cmd: list[str], cwd: Path | None = None, env: dict | None = None) -> None:
@@ -100,14 +105,13 @@ def main() -> None:
         ]
     )
 
-    traj = WORK / "b2_v1_codes.jsonl"
-    py(
-        [
+    def select_cmd(out: Path, *, alpha: float, beta: float, control: str = "none") -> list[str]:
+        return [
             "scripts/select_compressed_codes.py",
             "--checkpoints",
             str(ckpt_dir),
             "--output",
-            str(traj),
+            str(out),
             "--model",
             MODEL,
             "--candidate-k",
@@ -117,36 +121,23 @@ def main() -> None:
             "--limit",
             str(COLLECT_LIMIT),
             "--alpha",
-            str(ALPHA),
+            str(alpha),
             "--beta",
-            str(BETA),
-        ]
-    )
-
-    traj_rand = WORK / "b2_random_codes.jsonl"
-    py(
-        [
-            "scripts/select_compressed_codes.py",
-            "--checkpoints",
-            str(ckpt_dir),
-            "--output",
-            str(traj_rand),
-            "--model",
-            MODEL,
-            "--candidate-k",
-            str(CAND_K),
-            "--n-codes",
-            str(N_CODES),
-            "--limit",
-            str(COLLECT_LIMIT),
-            "--alpha",
-            str(ALPHA),
-            "--beta",
-            str(BETA),
+            str(beta),
             "--control",
-            "random",
+            control,
+            "--verify-chat-template",
         ]
-    )
+
+    traj_func = WORK / "b2_func_only.jsonl"
+    py(select_cmd(traj_func, alpha=FUNC_ALPHA, beta=FUNC_BETA))
+
+    traj_geom = WORK / "b2_geom_plus_func.jsonl"
+    py(select_cmd(traj_geom, alpha=GEOM_ALPHA, beta=GEOM_BETA))
+
+    # Random control: same search hyperparams as func_only, then replace + re-score
+    traj_rand = WORK / "b2_random_codes.jsonl"
+    py(select_cmd(traj_rand, alpha=FUNC_ALPHA, beta=FUNC_BETA, control="random"))
 
     label_out = WORK / "b2_answer_label_codes.jsonl"
     py(
@@ -166,50 +157,114 @@ def main() -> None:
             str(COLLECT_LIMIT),
         ]
     )
+    # Score label codes with the same answer-only NLL machinery
+    label_scored = WORK / "b2_answer_label_scored.jsonl"
+    py(
+        [
+            "scripts/select_compressed_codes.py",
+            "--checkpoints",
+            str(ckpt_dir),
+            "--output",
+            str(label_scored),
+            "--model",
+            MODEL,
+            "--candidate-k",
+            str(CAND_K),
+            "--n-codes",
+            str(N_CODES),
+            "--limit",
+            str(COLLECT_LIMIT),
+            "--codes-jsonl",
+            str(label_out),
+            "--verify-chat-template",
+        ]
+    )
 
     def load_meta(path: Path) -> dict:
         m = path.with_name(path.stem + ".meta.json")
         return json.loads(m.read_text()) if m.exists() else {}
 
-    v1 = load_meta(traj)
+    func = load_meta(traj_func)
+    geom = load_meta(traj_geom)
     rnd = load_meta(traj_rand)
-    lab = load_meta(label_out)
-    mean_delta = float(v1.get("mean_delta_nll_vs_no_code") or 0.0)
+    lab = load_meta(label_scored)
+
+    def mean_delta(m: dict) -> float:
+        return float(m.get("mean_delta_nll_vs_no_code") or 0.0)
+
+    def mean_final(m: dict) -> float:
+        return float(m.get("mean_final_answer_nll") or 0.0)
+
+    d_func, d_rand, d_lab = mean_delta(func), mean_delta(rnd), mean_delta(lab)
+    d_geom = mean_delta(geom)
+    # Lower final NLL is better
+    beats_no_code = d_func > 0.05
+    beats_random = d_func > d_rand + 0.02
+    # Label codes are a strong shortcut upper bound on this tiny label space;
+    # selected codes should not be *required* to beat them, but we record it.
+    beats_label = d_func > d_lab + 0.02
+    better_final_than_random = mean_final(func) < mean_final(rnd) - 1e-6
+
+    gate_pass = bool(beats_no_code and beats_random and better_final_than_random)
     gate = {
         "approach": "B2_diag_compressed_ar_v1",
         "hypothesis": "compressed-token computation (not claimed reasoning language)",
         "vocab_expanded": False,
         "sft_run": False,
         "grpo_run": False,
-        "v1_select": v1,
+        "func_only": func,
+        "geom_plus_func": geom,
         "random_control": rnd,
-        "answer_label_control": lab,
+        "answer_label_scored": lab,
+        "comparisons": {
+            "func_delta_nll": d_func,
+            "geom_delta_nll": d_geom,
+            "random_delta_nll": d_rand,
+            "label_delta_nll": d_lab,
+            "func_mean_final_nll": mean_final(func),
+            "random_mean_final_nll": mean_final(rnd),
+            "label_mean_final_nll": mean_final(lab),
+            "beats_no_code": beats_no_code,
+            "beats_random_delta": beats_random,
+            "better_final_nll_than_random": better_final_than_random,
+            "beats_label_delta": beats_label,
+            "note_label": (
+                "Beating answer-label codes is optional on this tiny ERROR_LINE "
+                "space; failure to beat them suggests label shortcut, not proof "
+                "against compressed computation on harder tasks (GSM8K)."
+            ),
+        },
+        "diagnostic_gate_pass": gate_pass,
         "diagnostic_signal": {
-            "mean_delta_nll_vs_no_code": mean_delta,
-            "positive_vs_no_code": mean_delta > 0.05,
-            "note": (
-                "Positive ΔNLL means selected codes reduce answer NLL vs closing "
-                "think with no codes. Required before SFT; not deployable accuracy."
+            "require": (
+                "func_only ΔNLL vs no-code > 0.05 AND beats random on ΔNLL "
+                "and mean final answer NLL (recomputed after control swap)"
+            ),
+            "passed": gate_pass,
+            "selection_bias_warning": (
+                "Searcher sees gold answers; oracle ΔNLL is an upper-bound "
+                "diagnostic, not student-generated accuracy."
             ),
         },
         "next_gate": [
-            "If diagnostic_signal.positive_vs_no_code: oracle teacher-forced codes on val",
-            "If oracle helps: SFT + self-generated eval vs F4/F5 + answer-label control",
+            "If diagnostic_gate_pass: oracle teacher-forced codes on held-out val",
+            "If oracle helps vs F4/F5: SFT + self-generated eval + label control",
             "GRPO only if self-generated SFT shows useful accuracy/compression trade-off",
-            "Transfer method to GSM8K before strong claims (small answer space here)",
+            "Transfer method to GSM8K before strong claims",
         ],
         "wall_clock_s": time.time() - t0,
         "config": {
             "collect_limit": COLLECT_LIMIT,
             "candidate_k": CAND_K,
             "n_codes": N_CODES,
-            "alpha": ALPHA,
-            "beta": BETA,
+            "func_alpha": FUNC_ALPHA,
+            "func_beta": FUNC_BETA,
+            "geom_alpha": GEOM_ALPHA,
+            "geom_beta": GEOM_BETA,
         },
     }
     (OUT / "gate_b2_diag.json").write_text(json.dumps(gate, indent=2))
-    # Also copy outputs for download
-    for src in (traj, traj_rand, label_out):
+    for src in (traj_func, traj_geom, traj_rand, label_out, label_scored):
         if src.exists():
             shutil.copy2(src, OUT / src.name)
             meta = src.with_name(src.stem + ".meta.json")

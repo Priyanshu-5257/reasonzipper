@@ -218,7 +218,7 @@ Hypothesis under test: **compressed-token computation** — fewer existing-token
 | Step | Status |
 |---|---|
 | Fix 1 consecutive `h_seq` + `token_spans` | `scripts/collect_checkpoints.py` |
-| Fix 2 V1 sequential select under compressed AR prefixes; `s_func` primary, `s_geom` aux | `scripts/select_compressed_codes.py`, `reasonzipper/compressed_selection.py` |
+| Fix 2 V1 sequential select under compressed AR prefixes; answer-only NLL (close delim masked); `func_only` + `geom_plus_func` ablations; controls re-scored after swap | `scripts/select_compressed_codes.py`, `reasonzipper/compressed_selection.py` |
 | Fix 3 concat + formatted round-trip; prefer ID-faithful completions | `reasonzipper/existing_vocab.py` |
 | Fix 4 `completion_tokens=len(new_tokens)`; all vs correct means; never shrink/resize for existing-vocab | `scripts/eval_model.py --require-original-vocab` |
 | Answer-label encoding control | `scripts/make_answer_label_codes.py` |

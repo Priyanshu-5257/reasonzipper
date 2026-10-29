@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from reasonzipper.compressed_selection import combine_scores, effective_codebook_size
+from reasonzipper.compressed_selection import (
+    combine_scores,
+    effective_codebook_size,
+    _zscore,
+)
 from reasonzipper.existing_vocab import (
     answer_label_code_ids,
     assert_ids_roundtrip,
@@ -9,11 +13,19 @@ from reasonzipper.existing_vocab import (
 
 
 def test_combine_scores_func_primary():
-    # With alpha=0, only functional matters
     assert combine_scores(0.99, -1.0, alpha=0.0, beta=1.0) == -1.0
     assert combine_scores(0.1, -0.5, alpha=0.0, beta=1.0) > combine_scores(
         0.9, -2.0, alpha=0.0, beta=1.0
     )
+
+
+def test_zscore_zero_var():
+    assert _zscore([1.0, 1.0, 1.0]) == [0.0, 0.0, 0.0]
+
+
+def test_zscore_orders():
+    z = _zscore([1.0, 2.0, 3.0])
+    assert z[0] < z[1] < z[2]
 
 
 def test_effective_codebook_size():
@@ -36,7 +48,7 @@ def test_answer_label_codes_deterministic():
 
 
 class _RoundTripTok:
-    """Tokens 'A','B' are single-id stable; 'X' merges when concatenated."""
+    """Tokens 'A','B' are single-id stable; chat template wraps completion."""
 
     def encode(self, text, add_special_tokens=False):
         if text == "A":
@@ -45,17 +57,21 @@ class _RoundTripTok:
             return [2]
         if text == "AB":
             return [1, 2]
-        if text == "<think>\nAB\n</think>\nERROR_LINE=1":
-            # think markers as multi-id noise around codes
+        if "AB" in text and "ERROR_LINE" in text:
             return [10, 1, 2, 11, 12]
         if text.startswith("<think>"):
-            # generic: find AB body
             return [10, 1, 2, 11, 12]
         return [99]
 
     def decode(self, ids, skip_special_tokens=False):
         mapping = {1: "A", 2: "B"}
         return "".join(mapping[int(i)] for i in ids)
+
+    def apply_chat_template(self, messages, tokenize=False, enable_thinking=True):
+        # Simulate Qwen wrapping: still contains the assistant completion body.
+        user = messages[0]["content"]
+        asst = messages[1]["content"]
+        return f"<|im_start|>user\n{user}<|im_end|>\n<|im_start|>assistant\n{asst}"
 
 
 def test_assert_ids_roundtrip_ok():
@@ -69,4 +85,16 @@ def test_build_think_completion_span():
     )
     assert ids == [1, 2]
     assert "<think>" in completion
+    assert "ERROR_LINE=1" in completion
+
+
+def test_build_think_completion_chat_template():
+    completion, ids = build_think_completion_from_ids(
+        _RoundTripTok(),
+        [1, 2],
+        "ERROR_LINE=1",
+        prompt="Find the error.",
+        verify_chat_template=True,
+    )
+    assert ids == [1, 2]
     assert "ERROR_LINE=1" in completion

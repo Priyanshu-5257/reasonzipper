@@ -64,10 +64,19 @@ def main() -> None:
                 candidates, gold_line, n_codes=args.n_codes
             )
             gold = format_gold_answer(gold_line)
+            prompt = build_prompt(
+                row["problem"], row["solution_lines"], thinking=True
+            )
             try:
-                completion, ids = build_think_completion_from_ids(tok, ids, gold)
+                completion, ids = build_think_completion_from_ids(
+                    tok,
+                    ids,
+                    gold,
+                    prompt=prompt,
+                    verify_chat_template=True,
+                )
             except AssertionError:
-                # Rare: try next offset until round-trip works
+                # Rare: try next offset until round-trip + chat template works
                 ok = False
                 for off in range(1, min(32, len(candidates))):
                     trial = answer_label_code_ids(
@@ -77,7 +86,11 @@ def main() -> None:
                     )
                     try:
                         completion, ids = build_think_completion_from_ids(
-                            tok, trial, gold
+                            tok,
+                            trial,
+                            gold,
+                            prompt=prompt,
+                            verify_chat_template=True,
                         )
                         ok = True
                         break
@@ -85,9 +98,6 @@ def main() -> None:
                         continue
                 if not ok:
                     continue
-            prompt = build_prompt(
-                row["problem"], row["solution_lines"], thinking=True
-            )
             out = {
                 "id": row["id"],
                 "prompt": prompt,

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from reasonzipper.existing_vocab import assert_original_vocabulary
+from reasonzipper.existing_vocab import assert_original_vocabulary, refuse_embedding_resize
 from reasonzipper.t4_train import (
     force_t4_fp16_env,
     prepare_qlora_for_t4,
@@ -109,8 +109,19 @@ def main() -> None:
         trust_remote_code=True,
     )
     if args.require_original_vocab:
-        meta_vocab = assert_original_vocabulary(base, tokenizer, label="sft-load")
+        meta_vocab = refuse_embedding_resize(base, tokenizer, label="sft-load")
         print(f"[sft] original vocab ok {meta_vocab}", flush=True)
+    else:
+        tok_n = len(tokenizer)
+        emb_n = int(base.get_input_embeddings().weight.shape[0])
+        if tok_n > emb_n:
+            print(f"[sft] resize embeddings {emb_n} -> {tok_n}", flush=True)
+            base.resize_token_embeddings(tok_n)
+        elif tok_n < emb_n:
+            print(
+                f"[sft] keeping padded embeddings emb={emb_n} tok={tok_n} (no shrink)",
+                flush=True,
+            )
 
     peft_config = LoraConfig(
         r=int(tcfg["lora_r"]),

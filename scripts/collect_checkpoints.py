@@ -132,10 +132,12 @@ def main() -> None:
 
         # Prefix IDs up to h_0 (start of compressed selection inside <think>)
         start_ids = tok(h0_text, add_special_tokens=False)["input_ids"]
-        # IDs for "</think>\n" + gold answer (functional scoring tail)
+        # Split close delimiter (context, unscored) from answer tokens (scored).
         gold = completion.split("</think>\n", 1)[-1]
-        close_answer_text = f"{think_close}\n{gold}"
-        close_answer_ids = tok(close_answer_text, add_special_tokens=False)["input_ids"]
+        close_ids = tok(f"{think_close}\n", add_special_tokens=False)["input_ids"]
+        answer_ids = tok(gold, add_special_tokens=False)["input_ids"]
+        # Back-compat: concatenated close+answer (older scorers)
+        close_answer_ids = list(close_ids) + list(answer_ids)
 
         shard = {
             "id": row["id"],
@@ -144,6 +146,8 @@ def main() -> None:
             "token_spans": token_spans,
             "boundary_lengths": lens,
             "start_prefix_ids": start_ids,
+            "close_ids": close_ids,
+            "answer_ids": answer_ids,
             "close_answer_ids": close_answer_ids,
             # Back-compat aliases for older assign scripts
             "h_start": h_list[0],

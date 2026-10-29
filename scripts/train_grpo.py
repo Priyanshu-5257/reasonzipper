@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from reasonzipper.existing_vocab import assert_original_vocabulary
+from reasonzipper.existing_vocab import assert_original_vocabulary, refuse_embedding_resize
 from reasonzipper.metrics import extract_reasoning_span, score_prediction
 from reasonzipper.reward import correctness_first_rewards
 from reasonzipper.t4_train import (
@@ -123,11 +123,20 @@ def main() -> None:
         torch_dtype=torch.float16,
         trust_remote_code=True,
     )
+    tok_n = len(tokenizer)
+    emb_n = int(base.get_input_embeddings().weight.shape[0])
     if args.require_original_vocab:
-        meta_vocab = assert_original_vocabulary(base, tokenizer, label="grpo-load")
+        meta_vocab = refuse_embedding_resize(base, tokenizer, label="grpo-load")
         print(f"[grpo] original vocab ok {meta_vocab}", flush=True)
-    elif len(tokenizer) != base.get_input_embeddings().weight.shape[0]:
-        base.resize_token_embeddings(len(tokenizer))
+    elif tok_n > emb_n:
+        # Stage C extended vocab only — never shrink Qwen pad rows.
+        print(f"[grpo] resize embeddings {emb_n} -> {tok_n}", flush=True)
+        base.resize_token_embeddings(tok_n)
+    elif tok_n < emb_n:
+        print(
+            f"[grpo] keeping padded embeddings emb={emb_n} tok={tok_n} (no shrink)",
+            flush=True,
+        )
     base.config.torch_dtype = torch.float16
     base = prepare_model_for_kbit_training(base, use_gradient_checkpointing=True)
     model = PeftModel.from_pretrained(base, str(args.sft_adapter), is_trainable=True)

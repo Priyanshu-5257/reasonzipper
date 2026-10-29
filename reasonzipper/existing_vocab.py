@@ -80,13 +80,16 @@ def build_think_completion_from_ids(
     *,
     verify_roundtrip: bool = True,
     verify_formatted: bool = True,
+    prompt: str | None = None,
+    verify_chat_template: bool = False,
+    enable_thinking: bool = True,
 ) -> tuple[str, list[int]]:
     """Build ``<think>\\n{codes}\\n</think>\\n{answer}`` preferring ID fidelity.
 
     Returns (completion_text, code_ids). When ``verify_formatted`` is set,
     also checks that the code IDs appear as a contiguous span inside the
-    tokenized completion (after chat-template-free local encode of the
-    assistant completion string).
+    tokenized completion. When ``verify_chat_template`` and ``prompt`` are set,
+    also checks the fully chat-templated user+assistant string used by SFT.
     """
     ids = [int(t) for t in token_ids]
     if verify_roundtrip:
@@ -96,7 +99,56 @@ def build_think_completion_from_ids(
     completion = f"<think>\n{body}\n</think>\n{gold_answer}"
     if verify_formatted:
         assert_code_span_in_text(tokenizer, completion, ids, label="completion")
+    if verify_chat_template:
+        if not prompt:
+            raise ValueError("prompt required when verify_chat_template=True")
+        assert_codes_survive_chat_template(
+            tokenizer,
+            prompt=prompt,
+            completion=completion,
+            token_ids=ids,
+            enable_thinking=enable_thinking,
+            label="chat-template",
+        )
     return completion, ids
+
+
+def assert_codes_survive_chat_template(
+    tokenizer: Any,
+    *,
+    prompt: str,
+    completion: str,
+    token_ids: Sequence[int],
+    enable_thinking: bool = True,
+    label: str = "",
+) -> list[int]:
+    """Assert selected code IDs remain a contiguous span after chat templating.
+
+    Mirrors ``train_sft.py`` text construction: apply_chat_template on
+    user prompt + assistant completion, then encode without specials.
+    """
+    messages = [
+        {"role": "user", "content": prompt},
+        {"role": "assistant", "content": completion},
+    ]
+    try:
+        text = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            enable_thinking=bool(enable_thinking),
+        )
+    except TypeError:
+        text = tokenizer.apply_chat_template(messages, tokenize=False)
+    enc = tokenizer.encode(text, add_special_tokens=False)
+    ids = [int(t) for t in token_ids]
+    n = len(ids)
+    if n and not any(enc[i : i + n] == ids for i in range(len(enc) - n + 1)):
+        prefix = f"[{label}] " if label else ""
+        raise AssertionError(
+            f"{prefix}code IDs {ids} missing after chat template "
+            f"(encoded_len={len(enc)})"
+        )
+    return enc
 
 
 def assert_code_span_in_text(
