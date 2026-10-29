@@ -150,8 +150,13 @@ def main() -> None:
     all_assign: list[int] = []
     n_out = 0
     n_roundtrip_fail = 0
+    n_fallback = 0
     deltas: list[float] = []
     finals: list[float] = []
+    deltas_primary: list[float] = []
+    deltas_fallback: list[float] = []
+    finals_primary: list[float] = []
+    finals_fallback: list[float] = []
 
     with args.output.open("w", encoding="utf-8") as fout, diag_path.open(
         "w", encoding="utf-8"
@@ -230,6 +235,7 @@ def main() -> None:
                 result_meta["selection_delta_nll_vs_no_code"] = selection_delta
 
             gold = format_gold_answer(it["first_error_line"])
+            used_fallback = False
             try:
                 completion, ids = build_think_completion_from_ids(
                     tok,
@@ -254,7 +260,7 @@ def main() -> None:
                             prompt=it["prompt"],
                             verify_chat_template=bool(args.verify_chat_template),
                         )
-                        # Re-score recovered fallback codes
+                        # Re-score recovered fallback codes (NOT the original traj)
                         result_meta = {
                             **score_prefix_answer_nll(
                                 base,
@@ -268,12 +274,16 @@ def main() -> None:
                             "variant": result_meta.get("variant", variant),
                             "fallback_roundtrip": True,
                         }
+                        used_fallback = True
                         recovered = True
                         break
                     except AssertionError:
                         continue
                 if not recovered:
                     continue
+
+            if used_fallback:
+                n_fallback += 1
 
             row = {
                 "id": it["id"],
@@ -289,6 +299,7 @@ def main() -> None:
                 "token_spans": it.get("token_spans"),
                 "selection": "compressed_ar_v1",
                 "variant": result_meta.get("variant", variant),
+                "fallback_roundtrip": used_fallback,
                 "alpha": args.alpha,
                 "beta": args.beta,
                 "control": args.control,
@@ -306,17 +317,29 @@ def main() -> None:
                         "token_spans": it.get("token_spans"),
                         "control": args.control,
                         "variant": result_meta.get("variant", variant),
+                        "fallback_roundtrip": used_fallback,
                     },
                     ensure_ascii=False,
                 )
                 + "\n"
             )
             all_assign.extend(ids)
-            deltas.append(float(result_meta["delta_nll_vs_no_code"]))
-            finals.append(float(result_meta["final_answer_nll"]))
+            dlt = float(result_meta["delta_nll_vs_no_code"])
+            fin = float(result_meta["final_answer_nll"])
+            deltas.append(dlt)
+            finals.append(fin)
+            if used_fallback:
+                deltas_fallback.append(dlt)
+                finals_fallback.append(fin)
+            else:
+                deltas_primary.append(dlt)
+                finals_primary.append(fin)
             n_out += 1
             if (ii + 1) % 10 == 0:
                 print(f"[select] {ii+1}/{len(items)}", flush=True)
+
+    def _mean(xs: list[float]) -> float:
+        return float(sum(xs) / len(xs)) if xs else 0.0
 
     usage = effective_codebook_size(all_assign, len(candidates))
     meta = {
@@ -327,10 +350,18 @@ def main() -> None:
         "beta": args.beta,
         "variant": variant if not preassigned else "preassigned",
         "control": args.control,
-        "mean_delta_nll_vs_no_code": (sum(deltas) / len(deltas) if deltas else 0.0),
-        "mean_final_answer_nll": (sum(finals) / len(finals) if finals else 0.0),
-        "usage": usage,
+        "mean_delta_nll_vs_no_code": _mean(deltas),
+        "mean_final_answer_nll": _mean(finals),
+        # Fallback replacements are NOT the selected trajectory — report apart.
         "n_roundtrip_fail": n_roundtrip_fail,
+        "n_fallback_roundtrip": n_fallback,
+        "fallback_rate": (n_fallback / n_out) if n_out else 0.0,
+        "mean_delta_nll_primary": _mean(deltas_primary),
+        "mean_delta_nll_fallback": _mean(deltas_fallback),
+        "mean_final_answer_nll_primary": _mean(finals_primary),
+        "mean_final_answer_nll_fallback": _mean(finals_fallback),
+        "n_primary": len(deltas_primary),
+        "usage": usage,
         "method": "compressed_ar_v1_answer_only_nll",
         "answer_nll_masks_close_delimiter": True,
         "scores_recomputed_after_control": True,

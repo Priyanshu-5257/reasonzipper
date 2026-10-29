@@ -30,6 +30,7 @@ MODEL = os.environ.get("RZ_MODEL", "Qwen/Qwen3-1.7B")
 COLLECT_LIMIT = int(os.environ.get("RZ_COLLECT_LIMIT", "64"))
 CAND_K = int(os.environ.get("RZ_CANDIDATE_K", "32"))
 N_CODES = int(os.environ.get("RZ_N_CODES", "3"))
+# Prefer primary (non-fallback) ΔNLL for the gate when available.
 # Optional overrides; defaults run both ablations below.
 FUNC_ALPHA = float(os.environ.get("RZ_FUNC_ALPHA", "0.0"))
 FUNC_BETA = float(os.environ.get("RZ_FUNC_BETA", "1.0"))
@@ -210,9 +211,14 @@ def main() -> None:
     lab = load_meta(label_scored)
 
     def mean_delta(m: dict) -> float:
+        # Prefer non-fallback trajectory scores when reported.
+        if m.get("n_primary"):
+            return float(m.get("mean_delta_nll_primary") or 0.0)
         return float(m.get("mean_delta_nll_vs_no_code") or 0.0)
 
     def mean_final(m: dict) -> float:
+        if m.get("n_primary"):
+            return float(m.get("mean_final_answer_nll_primary") or 0.0)
         return float(m.get("mean_final_answer_nll") or 0.0)
 
     d_func, d_rand, d_lab = mean_delta(func), mean_delta(rnd), mean_delta(lab)
