@@ -1,6 +1,8 @@
-"""Approach B-full on Kaggle: collect checkpoints → P_phi assign → SFT → GRPO.
+"""LEGACY B-full (P_phi NN/CE) — do not use for new hypothesis runs.
 
-Existing vocabulary only. Selector discarded after B-2 targets are written.
+Use ``kaggle/existing_vocab_b2_diag/`` first (V1 compressed-AR select, no SFT/GRPO).
+Only resume full SFT/GRPO after diagnostic + oracle gates pass, via the revised
+``select_compressed_codes.py`` path (not assign_trajectory_codes.py).
 """
 
 from __future__ import annotations

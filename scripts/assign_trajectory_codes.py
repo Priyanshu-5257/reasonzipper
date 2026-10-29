@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Train P_phi on teacher checkpoints and assign hard existing-token codes.
+"""DEPRECATED for B2 hypothesis tests.
 
-Loss: maximize cosine(P_phi(h), E[target]) where target is the NN of h_end among S
-as a bootstrapped alignment target (then hard-assign from P_phi). Also a mild
-usage entropy bonus via batch-level KL toward uniform (optional).
-Writes SFT JSONL for B-2 distillation.
+Use ``scripts/select_compressed_codes.py`` (V1 functional + compressed AR
+prefixes) instead. This script retains the old NN(h_end)→CE projector path
+for ablation comparisons only — it does **not** test whether tokens preserve
+useful computation.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
 from reasonzipper.existing_vocab import (
     assert_original_vocabulary,
     build_candidate_token_ids,
-    ids_to_think_body,
+    build_think_completion_from_ids,
 )
 from reasonzipper.schemas import format_gold_answer
 from reasonzipper.trajectory_selector import (
@@ -77,17 +77,33 @@ def main() -> None:
     E_s = emb[candidates].to(torch.float32).to(args.device)
     emb_size = int(E_s.shape[1])
 
-    # Load all blocks
+    print(
+        "[assign] WARNING: NN/CE projector path is deprecated for hypothesis tests; "
+        "prefer scripts/select_compressed_codes.py",
+        flush=True,
+    )
+
+    # Consecutive pairs (h_i, h_{i+1}) — not repeated h_0 with every end state.
     h_starts = []
     h_ends = []
     owners = []  # (item_idx, block_idx)
     for ii, it in enumerate(items):
         shard = torch.load(args.checkpoints / it["path"], map_location="cpu")
-        hs = shard["h_start"].float()
-        for bi in range(int(shard["n_blocks"])):
-            h_starts.append(hs)
-            h_ends.append(shard["h_ends"][bi].float())
-            owners.append((ii, bi))
+        if "h_seq" in shard:
+            seq = shard["h_seq"].float()
+            for bi in range(int(seq.shape[0]) - 1):
+                h_starts.append(seq[bi])
+                h_ends.append(seq[bi + 1])
+                owners.append((ii, bi))
+        else:
+            hs = shard["h_start"].float()
+            prev = hs
+            for bi in range(int(shard["n_blocks"])):
+                h_ends_i = shard["h_ends"][bi].float()
+                h_starts.append(prev)
+                h_ends.append(h_ends_i)
+                owners.append((ii, bi))
+                prev = h_ends_i
     H0 = torch.stack(h_starts, dim=0)
     H1 = torch.stack(h_ends, dim=0)
     print(f"[assign] blocks={len(owners)} hidden={hidden_size} K={len(candidates)}", flush=True)
@@ -159,9 +175,14 @@ def main() -> None:
     with args.output.open("w", encoding="utf-8") as fout:
         for ii, it in enumerate(items):
             ids = assigned_local[ii][:8] or [int(candidates[0])]
-            body = ids_to_think_body(tok, ids)
             gold = it["first_error_line"]
-            completion = f"<think>\n{body}\n</think>\n{format_gold_answer(gold)}"
+            try:
+                completion, ids = build_think_completion_from_ids(
+                    tok, ids, format_gold_answer(gold)
+                )
+            except AssertionError:
+                # Skip rows whose assigned codes do not survive tokenization
+                continue
             row = {
                 "id": it["id"],
                 "prompt": it["prompt"],

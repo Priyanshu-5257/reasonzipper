@@ -55,6 +55,95 @@ def ids_to_think_body(tokenizer: Any, token_ids: Sequence[int]) -> str:
     return "".join(parts)
 
 
+def assert_ids_roundtrip(
+    tokenizer: Any,
+    token_ids: Sequence[int],
+    *,
+    label: str = "",
+) -> str:
+    """Require concat-decode → encode recovers the exact ID sequence."""
+    ids = [int(t) for t in token_ids]
+    body = ids_to_think_body(tokenizer, ids)
+    recovered = tokenizer.encode(body, add_special_tokens=False)
+    if recovered != ids:
+        prefix = f"[{label}] " if label else ""
+        raise AssertionError(
+            f"{prefix}code ID round-trip failed: {ids} -> {body!r} -> {recovered}"
+        )
+    return body
+
+
+def build_think_completion_from_ids(
+    tokenizer: Any,
+    token_ids: Sequence[int],
+    gold_answer: str,
+    *,
+    verify_roundtrip: bool = True,
+    verify_formatted: bool = True,
+) -> tuple[str, list[int]]:
+    """Build ``<think>\\n{codes}\\n</think>\\n{answer}`` preferring ID fidelity.
+
+    Returns (completion_text, code_ids). When ``verify_formatted`` is set,
+    also checks that the code IDs appear as a contiguous span inside the
+    tokenized completion (after chat-template-free local encode of the
+    assistant completion string).
+    """
+    ids = [int(t) for t in token_ids]
+    if verify_roundtrip:
+        body = assert_ids_roundtrip(tokenizer, ids, label="think-body")
+    else:
+        body = ids_to_think_body(tokenizer, ids)
+    completion = f"<think>\n{body}\n</think>\n{gold_answer}"
+    if verify_formatted:
+        assert_code_span_in_text(tokenizer, completion, ids, label="completion")
+    return completion, ids
+
+
+def assert_code_span_in_text(
+    tokenizer: Any,
+    text: str,
+    token_ids: Sequence[int],
+    *,
+    label: str = "",
+) -> None:
+    """Assert ``token_ids`` occur as a contiguous subsequence of ``encode(text)``."""
+    ids = [int(t) for t in token_ids]
+    enc = tokenizer.encode(text, add_special_tokens=False)
+    n = len(ids)
+    if n == 0:
+        return
+    found = any(enc[i : i + n] == ids for i in range(len(enc) - n + 1))
+    if not found:
+        prefix = f"[{label}] " if label else ""
+        raise AssertionError(
+            f"{prefix}code IDs {ids} not found as contiguous span in encoded text "
+            f"(len={len(enc)})"
+        )
+
+
+def answer_label_code_ids(
+    candidates: Sequence[int],
+    first_error_line: int | str,
+    *,
+    n_codes: int = 1,
+) -> list[int]:
+    """Deterministic short codes that explicitly encode the answer label.
+
+    Control for distinguishing answer-label shortcuts from intermediate
+    computation: line ``k`` / ``NONE`` map to fixed offsets in ``candidates``.
+    """
+    if not candidates:
+        raise ValueError("empty candidate set")
+    if isinstance(first_error_line, str) and first_error_line.upper() == "NONE":
+        key = 0
+    else:
+        key = int(first_error_line)
+    # Reserve index 0 for NONE; positive lines use key (mod pool).
+    base = key % len(candidates)
+    out = [int(candidates[(base + i) % len(candidates)]) for i in range(max(1, n_codes))]
+    return out
+
+
 def assert_original_vocabulary(
     model: Any,
     tokenizer: Any,
@@ -88,6 +177,27 @@ def assert_original_vocabulary(
         if meta[key] != int(baseline[key]):
             raise AssertionError(
                 f"{prefix}{key} changed {baseline[key]} -> {meta[key]} "
-                "(must stay identical to the base Qwen3 checkpoint)"
+                "(must stay identical to the base Qwen checkpoint)"
             )
+    return meta
+
+
+def refuse_embedding_resize(
+    model: Any,
+    tokenizer: Any,
+    *,
+    label: str = "",
+) -> dict[str, int]:
+    """Existing-vocab policy: never resize; fail on unexpected expansion.
+
+    Qwen pad rows (``emb > tok``) must be preserved as-is.
+    """
+    meta = assert_original_vocabulary(model, tokenizer, label=label)
+    prefix = f"[{label}] " if label else ""
+    tok_n = meta["tokenizer"]
+    emb_n = meta["embeddings"]
+    if tok_n > emb_n:
+        raise ValueError(
+            f"{prefix}Unexpected vocabulary expansion: tokenizer={tok_n} > embeddings={emb_n}"
+        )
     return meta

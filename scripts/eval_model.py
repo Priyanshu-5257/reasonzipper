@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from reasonzipper.existing_vocab import refuse_embedding_resize
 from reasonzipper.metrics import build_prompt, count_reasoning_tokens, score_prediction
 
 
@@ -71,6 +72,11 @@ def main() -> None:
         default=None,
         help="Optional tokenizer dir (required for Stage C extended vocab)",
     )
+    p.add_argument(
+        "--require-original-vocab",
+        action="store_true",
+        help="Existing-vocab runs: never resize; fail on tokenizer expansion",
+    )
     args = p.parse_args()
 
     with args.config.open() as f:
@@ -109,12 +115,20 @@ def main() -> None:
         load_kwargs["torch_dtype"] = torch.float16
 
     model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
-    if len(tokenizer) != model.get_input_embeddings().weight.shape[0]:
+    tok_n = len(tokenizer)
+    emb_n = int(model.get_input_embeddings().weight.shape[0])
+    if args.require_original_vocab:
+        meta = refuse_embedding_resize(model, tokenizer, label="eval")
+        print(f"[eval] original vocab ok {meta}", flush=True)
+    elif tok_n > emb_n:
+        # Stage C / extended vocab only: grow embeddings; never shrink Qwen pad.
+        print(f"[eval] resize embeddings {emb_n} -> {tok_n}", flush=True)
+        model.resize_token_embeddings(tok_n)
+    elif tok_n < emb_n:
         print(
-            f"[eval] resize embeddings {model.get_input_embeddings().weight.shape[0]} -> {len(tokenizer)}",
+            f"[eval] keeping padded embeddings emb={emb_n} tok={tok_n} (no shrink)",
             flush=True,
         )
-        model.resize_token_embeddings(len(tokenizer))
     if args.adapter:
         from peft import PeftModel
 
@@ -136,7 +150,11 @@ def main() -> None:
 
     preds = []
     n_correct = 0
-    reasoning_token_counts = []
+    reasoning_token_counts: list[int] = []
+    completion_token_counts: list[int] = []
+    reasoning_token_counts_correct: list[int] = []
+    completion_token_counts_correct: list[int] = []
+    n_truncated = 0
     t0 = time.perf_counter()
 
     log_every = max(1, min(10, len(rows) // 10 or 1))
@@ -162,6 +180,10 @@ def main() -> None:
                 gen_kwargs["do_sample"] = False
             out = model.generate(**inputs, **gen_kwargs)
         new_tokens = out[0][inputs["input_ids"].shape[1] :]
+        completion_tokens = int(new_tokens.shape[0])
+        truncated = completion_tokens >= max_new
+        if truncated:
+            n_truncated += 1
         text = tokenizer.decode(new_tokens, skip_special_tokens=False)
         # Strip special tokens that clutter parsing but keep think tags if present
         text_for_parse = text.replace("<|im_end|>", "").replace("<|endoftext|>", "")
@@ -169,12 +191,18 @@ def main() -> None:
         tok_stats = count_reasoning_tokens(text_for_parse, tokenizer)
         if scored["correct"]:
             n_correct += 1
+            reasoning_token_counts_correct.append(tok_stats["reasoning_tokens"])
+            completion_token_counts_correct.append(completion_tokens)
+        # Primary efficiency metrics: over ALL examples (not correct-only).
         reasoning_token_counts.append(tok_stats["reasoning_tokens"])
+        completion_token_counts.append(completion_tokens)
         preds.append(
             {
                 "id": row["id"],
                 "gold": row["first_error_line"],
                 "prediction_text": text_for_parse,
+                "completion_tokens": completion_tokens,
+                "truncated": truncated,
                 **scored,
                 **tok_stats,
             }
@@ -183,6 +211,7 @@ def main() -> None:
             acc = n_correct / i
             print(
                 f"[eval] {i}/{len(rows)} acc={acc:.3f} "
+                f"last_c_toks={completion_tokens} "
                 f"last_r_toks={tok_stats['reasoning_tokens']} "
                 f"step_s={time.perf_counter() - step_t0:.1f} "
                 f"elapsed_s={time.perf_counter() - t0:.1f}",
@@ -202,21 +231,36 @@ def main() -> None:
             )
 
     elapsed = time.perf_counter() - t0
+
+    def _mean(xs: list[int] | list[float]) -> float:
+        return float(sum(xs) / len(xs)) if xs else 0.0
+
+    def _median(xs: list[int]) -> float:
+        if not xs:
+            return 0.0
+        s = sorted(xs)
+        return float(s[len(s) // 2])
+
     summary = {
         "model": model_name,
         "thinking": args.thinking,
         "n": len(rows),
         "accuracy": n_correct / max(len(rows), 1),
         "malformed_rate": sum(1 for x in preds if x["malformed"]) / max(len(rows), 1),
-        "mean_reasoning_tokens": (
-            sum(reasoning_token_counts) / max(len(reasoning_token_counts), 1)
-        ),
-        "median_reasoning_tokens": sorted(reasoning_token_counts)[len(reasoning_token_counts) // 2]
-        if reasoning_token_counts
-        else 0,
+        "truncation_rate": n_truncated / max(len(rows), 1),
+        # Primary length: actual generated tokens over ALL examples
+        "mean_completion_tokens": _mean(completion_token_counts),
+        "median_completion_tokens": _median(completion_token_counts),
+        "mean_completion_tokens_correct": _mean(completion_token_counts_correct),
+        # Secondary: think-span counts
+        "mean_reasoning_tokens": _mean(reasoning_token_counts),
+        "median_reasoning_tokens": _median(reasoning_token_counts),
+        "mean_reasoning_tokens_correct": _mean(reasoning_token_counts_correct),
         "wall_clock_s": elapsed,
+        "mean_latency_s": elapsed / max(len(rows), 1),
         "max_new_tokens": max_new,
         "seed": seed,
+        "require_original_vocab": bool(args.require_original_vocab),
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

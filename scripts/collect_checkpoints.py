@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Offline teacher checkpoint extraction for Approach B (final-layer states).
 
-For each train example, teacher-force the short verified CoT and save
-(h_start, h_end) at each reasoning-line boundary inside <think>.
+For each train example, teacher-force the short verified CoT and save the
+ordered final-layer states at each reasoning-line boundary inside <think>:
+
+    h_seq = [h_0, h_1, ..., h_m]
+
+where h_0 is the state after ``<think>`` and h_i is the state after line i.
+Also records token span lengths between consecutive checkpoints.
 """
 
 from __future__ import annotations
@@ -89,46 +94,60 @@ def main() -> None:
             continue
         pre, rest = text.split(think_open, 1)
         think_body, post = rest.split(think_close, 1)
-        # Positions: end of each non-empty reasoning line (+ think_open token region)
         lines = [ln for ln in think_body.split("\n") if ln.strip()]
         if not lines:
             continue
         lines = lines[: max(1, args.max_codes)]
 
-        # Cumulative prefixes ending at each reasoning line (inside <think>)
-        h_start_text = pre + think_open
-        prefix_texts: list[str] = []
-        acc = h_start_text
+        # Texts ending at h_0 (after "<think>\n") and after each reasoning line.
+        # Trailing newline matches SFT body layout: <think>\n{codes}\n</think>
+        h0_text = pre + think_open + "\n"
+        boundary_texts: list[str] = [h0_text]
+        acc = h0_text
         for ln in lines:
-            acc = acc + "\n" + ln
-            prefix_texts.append(acc)
+            # First line follows the newline already in h0_text; later lines need \n.
+            if acc.endswith("\n") and acc == h0_text:
+                acc = acc + ln
+            else:
+                acc = acc + "\n" + ln
+            boundary_texts.append(acc)
 
-        enc_start = tok(h_start_text, return_tensors="pt", add_special_tokens=False)
-        with torch.no_grad():
-            out_start = model(
-                **{k: v.to(model.device) for k, v in enc_start.items()},
-                output_hidden_states=True,
-                use_cache=False,
-            )
-            h_start = out_start.hidden_states[-1][0, -1, :].detach().to(torch.float16).cpu()
-
-        block_hs = []
-        for ptxt in prefix_texts:
+        h_list: list[torch.Tensor] = []
+        lens: list[int] = []
+        for ptxt in boundary_texts:
             enc = tok(ptxt, return_tensors="pt", add_special_tokens=False)
+            n_tok = int(enc["input_ids"].shape[1])
+            lens.append(n_tok)
             with torch.no_grad():
                 out = model(
                     **{k: v.to(model.device) for k, v in enc.items()},
                     output_hidden_states=True,
                     use_cache=False,
                 )
-                h_end = out.hidden_states[-1][0, -1, :].detach().to(torch.float16).cpu()
-            block_hs.append(h_end)
+                h = out.hidden_states[-1][0, -1, :].detach().to(torch.float16).cpu()
+            h_list.append(h)
+
+        # token_spans[i] = teacher tokens between h_i and h_{i+1}
+        token_spans = [lens[j + 1] - lens[j] for j in range(len(lens) - 1)]
+
+        # Prefix IDs up to h_0 (start of compressed selection inside <think>)
+        start_ids = tok(h0_text, add_special_tokens=False)["input_ids"]
+        # IDs for "</think>\n" + gold answer (functional scoring tail)
+        gold = completion.split("</think>\n", 1)[-1]
+        close_answer_text = f"{think_close}\n{gold}"
+        close_answer_ids = tok(close_answer_text, add_special_tokens=False)["input_ids"]
 
         shard = {
             "id": row["id"],
-            "h_start": h_start,
-            "h_ends": torch.stack(block_hs, dim=0),
-            "n_blocks": len(block_hs),
+            "h_seq": torch.stack(h_list, dim=0),
+            "n_blocks": len(h_list) - 1,
+            "token_spans": token_spans,
+            "boundary_lengths": lens,
+            "start_prefix_ids": start_ids,
+            "close_answer_ids": close_answer_ids,
+            # Back-compat aliases for older assign scripts
+            "h_start": h_list[0],
+            "h_ends": torch.stack(h_list[1:], dim=0) if len(h_list) > 1 else torch.empty(0, hidden_size),
             "first_error_line": row["first_error_line"],
             "gold_answer": row["gold_answer"],
             "prompt": prompt,
@@ -139,7 +158,11 @@ def main() -> None:
             {
                 "id": row["id"],
                 "path": path.name,
-                "n_blocks": len(block_hs),
+                "n_blocks": len(h_list) - 1,
+                "token_spans": token_spans,
+                "mean_token_span": (
+                    sum(token_spans) / len(token_spans) if token_spans else 0.0
+                ),
                 "first_error_line": row["first_error_line"],
                 "gold_answer": row["gold_answer"],
                 "prompt": prompt,
@@ -153,8 +176,12 @@ def main() -> None:
         "model": args.model,
         "hidden_size": hidden_size,
         "max_codes": args.max_codes,
+        "pairing": "consecutive_h_seq",
+        "schema": "h_seq=[h0..hm]; token_spans between consecutive",
     }
-    (args.output / "index.json").write_text(json.dumps({"meta": meta, "items": index}, indent=2))
+    (args.output / "index.json").write_text(
+        json.dumps({"meta": meta, "items": index}, indent=2)
+    )
     print(f"[collect] wrote {len(index)} checkpoints -> {args.output}", flush=True)
 
 

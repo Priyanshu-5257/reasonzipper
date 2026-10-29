@@ -208,7 +208,23 @@ All numbers below: synthetic **val n=100**, same generator seed 42, Qwen3-1.7B Q
 - Approach A did not discover a useful short private language; it stayed near-empty `<think>` + direct `ERROR_LINE=`.
 - Matched filler (F5) matches F4 accuracy without needing learned codes.
 - Trajectory→existing-ID (B-v1) and hidden-state `P_phi` (B2) failed to clear F4; B2 collapsed the codebook.
+- **Those B2 numbers do not falsify the hypothesis**: training optimized NN(`h_end`)→CE with repeated `h_start`, not student transitions under compressed prefixes.
 - **Expanded-vocab C3** (Stage C / sealed) remains the positive compression result under a *different* constraint (new `<|rXXX|>` tokens).
+
+### B2 revised path (implemented; diagnostic before SFT/GRPO)
+
+Hypothesis under test: **compressed-token computation** — fewer existing-token steps preserve enough computation to solve the task (hidden states need not match).
+
+| Step | Status |
+|---|---|
+| Fix 1 consecutive `h_seq` + `token_spans` | `scripts/collect_checkpoints.py` |
+| Fix 2 V1 sequential select under compressed AR prefixes; `s_func` primary, `s_geom` aux | `scripts/select_compressed_codes.py`, `reasonzipper/compressed_selection.py` |
+| Fix 3 concat + formatted round-trip; prefer ID-faithful completions | `reasonzipper/existing_vocab.py` |
+| Fix 4 `completion_tokens=len(new_tokens)`; all vs correct means; never shrink/resize for existing-vocab | `scripts/eval_model.py --require-original-vocab` |
+| Answer-label encoding control | `scripts/make_answer_label_codes.py` |
+| Cheap Kaggle diagnostic (no SFT/GRPO) | `kaggle/existing_vocab_b2_diag/` |
+
+**Gates before full training:** positive mean ΔNLL vs no-code on V1 select → oracle teacher-forced codes → self-generated SFT vs F4/F5 **and** answer-label control → GRPO only if SFT trade-off is useful. GSM8K before strong claims (synthetic answer space is tiny). Old `assign_trajectory_codes.py` (P_φ NN/CE) is deprecated for hypothesis tests.
 
 Artifacts:
 - `artifacts/reports/approach_a/gate_approach_a.json`
@@ -216,7 +232,7 @@ Artifacts:
 - `artifacts/reports/approach_b/gate_approach_b.json`
 - `artifacts/reports/approach_b2/gate_approach_b2.json`
 
-Code: `kaggle/existing_vocab_{a,f5,b,b2}/`, `scripts/{make_answer_only,make_filler_thinking,make_trajectory_codes,collect_checkpoints,assign_trajectory_codes}.py`, `reasonzipper/{existing_vocab,trajectory_selector}.py`
+Code: `kaggle/existing_vocab_{a,f5,b,b2,b2_diag}/`, `scripts/{make_answer_only,make_filler_thinking,make_trajectory_codes,collect_checkpoints,select_compressed_codes,make_answer_label_codes}.py`, `reasonzipper/{existing_vocab,compressed_selection,trajectory_selector}.py`
 
 ---
 
