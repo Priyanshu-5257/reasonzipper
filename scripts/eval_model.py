@@ -117,11 +117,11 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
     tok_n = len(tokenizer)
     emb_n = int(model.get_input_embeddings().weight.shape[0])
+    # Never shrink Qwen pad rows (emb > tok). Only grow for Stage C expansion.
     if args.require_original_vocab:
         meta = refuse_embedding_resize(model, tokenizer, label="eval")
         print(f"[eval] original vocab ok {meta}", flush=True)
     elif tok_n > emb_n:
-        # Stage C / extended vocab only: grow embeddings; never shrink Qwen pad.
         print(f"[eval] resize embeddings {emb_n} -> {tok_n}", flush=True)
         model.resize_token_embeddings(tok_n)
     elif tok_n < emb_n:
@@ -129,6 +129,8 @@ def main() -> None:
             f"[eval] keeping padded embeddings emb={emb_n} tok={tok_n} (no shrink)",
             flush=True,
         )
+    else:
+        print(f"[eval] vocab aligned tok=emb={tok_n}", flush=True)
     if args.adapter:
         from peft import PeftModel
 

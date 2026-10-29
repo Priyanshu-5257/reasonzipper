@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from reasonzipper.existing_vocab import assert_original_vocabulary, refuse_embedding_resize
+from reasonzipper.existing_vocab import (
+    assert_codes_survive_chat_template,
+    assert_original_vocabulary,
+    refuse_embedding_resize,
+)
 from reasonzipper.t4_train import (
     force_t4_fp16_env,
     prepare_qlora_for_t4,
@@ -51,6 +55,12 @@ def main() -> None:
         "--require-original-vocab",
         action="store_true",
         help="Abort if tokenizer/embeddings diverge (Approach A existing-vocab)",
+    )
+    p.add_argument(
+        "--verify-code-ids",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="When rows include code_token_ids, assert they survive chat templating",
     )
     args = p.parse_args()
 
@@ -92,7 +102,33 @@ def main() -> None:
         except TypeError:
             return tokenizer.apply_chat_template(messages, tokenize=False)
 
-    texts = [{"text": to_text(r)} for r in rows]
+    n_code_verified = 0
+    texts = []
+    for r in rows:
+        text = to_text(r)
+        code_ids = r.get("code_token_ids")
+        if args.verify_code_ids and code_ids:
+            # Prefer shared helper (same check as selector); also encode the
+            # exact SFT string so trainer inputs match what we verified.
+            assert_codes_survive_chat_template(
+                tokenizer,
+                prompt=r["prompt"],
+                completion=r["completion"],
+                token_ids=code_ids,
+                enable_thinking=bool(args.enable_thinking),
+                label=f"sft:{r.get('id', '?')}",
+            )
+            enc = tokenizer.encode(text, add_special_tokens=False)
+            ids = [int(x) for x in code_ids]
+            n = len(ids)
+            if n and not any(enc[i : i + n] == ids for i in range(len(enc) - n + 1)):
+                raise AssertionError(
+                    f"[sft:{r.get('id')}] code IDs {ids} missing in tokenized SFT text"
+                )
+            n_code_verified += 1
+        texts.append({"text": text})
+    if n_code_verified:
+        print(f"[sft] verified code_token_ids in {n_code_verified} rows", flush=True)
     ds = Dataset.from_list(texts)
 
     bnb = BitsAndBytesConfig(

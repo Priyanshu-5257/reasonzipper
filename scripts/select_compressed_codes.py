@@ -175,23 +175,14 @@ def main() -> None:
             n_codes = min(args.n_codes, max(1, len(h_seq) - 1))
 
             step_logs: list = []
+            selection_delta: float | None = None
+            row_variant = variant
+
             if it["id"] in preassigned:
                 ids = list(preassigned[it["id"]])
-                scored = score_prefix_answer_nll(
-                    base,
-                    start_prefix_ids=start_ids,
-                    code_ids=ids,
-                    close_ids=close_ids,
-                    answer_ids=answer_ids,
-                    device=device,
-                )
-                result_meta = {
-                    **scored,
-                    "steps": [],
-                    "variant": "preassigned",
-                }
+                row_variant = "preassigned"
             else:
-                result = select_code_sequence(
+                selected = select_code_sequence(
                     base,
                     start_prefix_ids=start_ids,
                     candidates=candidates,
@@ -204,9 +195,10 @@ def main() -> None:
                     beta=args.beta,
                     zscore_combine=args.zscore_combine,
                 )
-                ids = list(result["code_token_ids"])
-                step_logs = result["steps"]
-                result_meta = result
+                ids = list(selected["code_token_ids"])
+                step_logs = list(selected["steps"])
+                selection_delta = float(selected["delta_nll_vs_no_code"])
+                row_variant = str(selected.get("variant", variant))
 
                 if args.control == "random":
                     ids = [int(rng.choice(candidates)) for _ in ids] or [
@@ -219,23 +211,23 @@ def main() -> None:
                     else:
                         ids = [int(rng.choice(candidates))]
 
-                # Always re-score after any control replacement (and for clarity
-                # even when control=none, matches written codes).
-                result_meta = {
-                    **score_prefix_answer_nll(
-                        base,
-                        start_prefix_ids=start_ids,
-                        code_ids=ids,
-                        close_ids=close_ids,
-                        answer_ids=answer_ids,
-                        device=device,
-                    ),
-                    "steps": step_logs,
-                    "variant": result.get("variant", variant),
-                    "selection_delta_nll_vs_no_code": result[
-                        "delta_nll_vs_no_code"
-                    ],
-                }
+            # Always score the IDs that will be written (covers select, control
+            # replacement, and --codes-jsonl preassigned paths alike).
+            scored = score_prefix_answer_nll(
+                base,
+                start_prefix_ids=start_ids,
+                code_ids=ids,
+                close_ids=close_ids,
+                answer_ids=answer_ids,
+                device=device,
+            )
+            result_meta: dict = {
+                **scored,
+                "steps": step_logs,
+                "variant": row_variant,
+            }
+            if selection_delta is not None:
+                result_meta["selection_delta_nll_vs_no_code"] = selection_delta
 
             gold = format_gold_answer(it["first_error_line"])
             try:

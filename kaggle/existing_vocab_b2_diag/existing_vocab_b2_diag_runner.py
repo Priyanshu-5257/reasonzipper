@@ -139,12 +139,32 @@ def main() -> None:
     traj_rand = WORK / "b2_random_codes.jsonl"
     py(select_cmd(traj_rand, alpha=FUNC_ALPHA, beta=FUNC_BETA, control="random"))
 
+    # Restrict label-control rows to IDs present in teacher checkpoints so
+    # --codes-jsonl scoring aligns with collect output.
+    ckpt_index = json.loads((ckpt_dir / "index.json").read_text())
+    ckpt_ids = {it["id"] for it in ckpt_index["items"]}
+    train_aligned = WORK / "train_aligned_for_label.jsonl"
+    with (DATA / "train" / "examples.jsonl").open(encoding="utf-8") as fin, train_aligned.open(
+        "w", encoding="utf-8"
+    ) as fout:
+        n_al = 0
+        for line in fin:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("id") in ckpt_ids:
+                fout.write(line if line.endswith("\n") else line + "\n")
+                n_al += 1
+                if n_al >= COLLECT_LIMIT:
+                    break
+    print(f"[diag] label-control aligned rows={n_al}", flush=True)
+
     label_out = WORK / "b2_answer_label_codes.jsonl"
     py(
         [
             "scripts/make_answer_label_codes.py",
             "--input",
-            str(DATA / "train" / "examples.jsonl"),
+            str(train_aligned),
             "--output",
             str(label_out),
             "--model",
